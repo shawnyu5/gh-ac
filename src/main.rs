@@ -28,6 +28,8 @@ struct Cli {
 enum Commands {
     /// commit the current changes
     Commit,
+    /// force push the current changes
+    Force,
 }
 
 /// workflow runs of a repo from gh api
@@ -57,28 +59,6 @@ pub struct WorkflowRun {
     pub workflow_url: String,
 }
 
-// impl PartialEq for WorkflowRun {
-// fn eq(&self, other: &Self) -> bool {
-// dbg!(other);
-// dbg!(&self);
-// self.id == other.id
-// && self.name == other.name
-// && self.head_branch == other.head_branch
-// && self.display_title == other.display_title
-// && self.status == other.status
-// && self.conclusion == other.conclusion
-// && self.created_at == other.created_at
-// && self.html_url == other.html_url
-// && self.run_number == other.run_number
-// && self.updated_at == other.updated_at
-// && self.run_started_at == other.run_started_at
-// && self.jobs_url == other.jobs_url
-// && self.logs_url == other.logs_url
-// && self.check_suite_url == other.check_suite_url
-// && self.artifacts_url == other.artifacts_url
-// && self.workflow_url == other.workflow_url
-// }
-// }
 fn main() {
     let cli = Cli::parse();
     match &cli.commands {
@@ -89,27 +69,84 @@ fn main() {
                 return;
             }
 
-            // let (is_staged, _) = check_staged_files();
+            let (is_staged, _) = check_staged_files();
 
-            // if !is_staged {
-            // println!("no staged files, exiting");
-            // return;
-            // }
+            if !is_staged {
+                println!("no staged files, exiting");
+                return;
+            }
 
-            // let commit_msg = git_commit().unwrap();
+            let commit_msg = git_commit().unwrap();
 
-            // if commit_msg.is_none() {
-            // println!("no commit message was entered, exiting");
-            // return;
-            // }
-            // println!("commiting successful: {}", commit_msg.unwrap());
+            if commit_msg.is_none() {
+                println!("no commit message was entered, exiting");
+                return;
+            }
+            println!("commiting successful: {}", commit_msg.unwrap());
 
-            // git_push().unwrap();
+            git_push(false).unwrap();
 
             loop {
                 let current_workflow_runs = get_workflow_runs().expect("workflow runs from gh");
-                dbg!(&initial_workflow_runs);
-                dbg!(&current_workflow_runs);
+                // dbg!(&initial_workflow_runs);
+                // dbg!(&current_workflow_runs);
+
+                let same = {
+                    initial_workflow_runs
+                        .clone()
+                        .workflow_runs
+                        .unwrap()
+                        .get(0)
+                        .unwrap()
+                        == current_workflow_runs
+                            .clone()
+                            .workflow_runs
+                            .unwrap()
+                            .get(0)
+                            .unwrap()
+                };
+
+                dbg!(&same);
+                if same {
+                    std::thread::sleep(std::time::Duration::from_secs(5));
+                    continue;
+                }
+                println!(
+                    "Workflow run url: {}",
+                    current_workflow_runs
+                        .clone()
+                        .workflow_runs
+                        .unwrap()
+                        .get(0)
+                        .unwrap()
+                        .html_url
+                );
+                break;
+            }
+        }
+        Commands::Force => {
+            let (is_staged, _) = check_staged_files();
+            if is_staged {
+                if !Confirm::new()
+                    .with_prompt("There are staged changes. Are you sure you want to force push?")
+                    .default(false)
+                    .interact()
+                    .unwrap()
+                {
+                    println!("Ok, aborting");
+                    return;
+                }
+            }
+
+            let initial_workflow_runs = get_workflow_runs().expect("workflow runs from `gh`");
+
+            git_commit_amend_no_edit().unwrap();
+            git_push(true).unwrap();
+
+            loop {
+                let current_workflow_runs = get_workflow_runs().expect("workflow runs from gh");
+                // dbg!(&initial_workflow_runs);
+                // dbg!(&current_workflow_runs);
 
                 let same = {
                     initial_workflow_runs
@@ -190,8 +227,15 @@ fn git_commit() -> Result<Option<String>> {
 }
 
 /// git push
-fn git_push() -> Result<()> {
-    let output = Command::new("git").arg("push").output()?;
+fn git_push(force: bool) -> Result<()> {
+    let args = {
+        if force {
+            vec!["push", "--force"]
+        } else {
+            vec!["push"]
+        }
+    };
+    let output = Command::new("git").args(args).output()?;
     let stdout = String::from_utf8_lossy(&output.stdout);
     println!("{}", stdout);
     return Ok(());
@@ -221,4 +265,16 @@ fn check_staged_files() -> (bool, String) {
 fn git_add_all() -> Option<Error> {
     let output = Command::new("git").arg("add").arg("-A").spawn();
     return output.err();
+}
+
+/// `git commit --amend --no-edit`
+fn git_commit_amend_no_edit() -> Result<()> {
+    //'git commit --amend --no-edit && git push --force'
+
+    let args = vec!["commit", "--amend", "--no-edit"];
+    // let output = Command::new("git").arg("push").arg("--force").output()?;
+    let output = Command::new("git").args(args).output()?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    println!("{}", stdout);
+    return Ok(());
 }
