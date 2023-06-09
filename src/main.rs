@@ -1,7 +1,8 @@
 use anyhow::{anyhow, Result};
-use dialoguer::Editor;
-
+use clap::ArgAction;
 use clap::{command, Parser};
+use dialoguer::{Confirm, Editor};
+use log::*;
 use std::borrow::Cow;
 use std::error::Error;
 use std::io;
@@ -19,6 +20,9 @@ struct Cli {
     /// git commit message
     #[arg(long, short)]
     message: Option<String>,
+    /// if all changes should be committed
+    #[arg(long, short)]
+    all: Option<bool>,
 }
 
 use serde_derive::Deserialize;
@@ -50,10 +54,14 @@ pub struct WorkflowRun {
 
 fn main() {
     let cli = Cli::parse();
+    cli.all.unwrap_or(false);
     let initial_workflow_runs = get_workflow_runs();
 
-    git_commit().unwrap();
-    git_push().unwrap();
+    get_diff();
+    // let commit_msg = git_commit().unwrap();
+    // log::info!("commiting successful: {}", commit_msg);
+
+    // git_push().unwrap();
 }
 
 /// get all workflow runs of a repo
@@ -74,8 +82,10 @@ fn get_workflow_runs() -> Result<Root> {
     }
 }
 
-fn git_commit() -> Result<()> {
-    let commit_message = match Editor::new().edit("Enter a commit message").unwrap() {
+/// prompts user to enter a commit message, then commits the changes to git
+/// returns the commit message if successful
+fn git_commit() -> Result<String> {
+    let commit_msg = match Editor::new().edit("Enter a commit message").unwrap() {
         Some(msg) => msg,
         None => String::from(""),
     };
@@ -83,15 +93,45 @@ fn git_commit() -> Result<()> {
     return match Command::new("git")
         .arg("commit")
         .arg("-m")
-        .arg(commit_message)
+        .arg(&commit_msg)
         .output()
     {
-        Ok(_) => Ok(()),
-        Err(_) => Err(anyhow!("Error commiting changes")),
+        Ok(output) => {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            println!("{}", stdout);
+            Ok(commit_msg)
+        }
+        Err(output) => Err(anyhow!("Error commiting changes: {}", output)),
     };
 }
 
 fn git_push() -> Result<()> {
     Command::new("git").arg("push").spawn()?;
     return Ok(());
+}
+
+fn get_diff() {
+    // if Confirm::new()
+    // .with_prompt("Do you want to continue?")
+    // .default(false)
+    // .interact()
+    // .unwrap()
+    // {
+    // println!("Looks like you want to continue");
+    // } else {
+    // println!("nevermind then :(");
+    // }
+    // TODO: if nothing is staged, prompt user if they would like to continue
+    let output = Command::new("git")
+        .arg("diff")
+        .arg("--staged")
+        .arg("--name-only")
+        .output()
+        .unwrap();
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    println!("{}", stdout);
+    if stdout == "" {
+        print!("HHHHHa")
+    }
 }
