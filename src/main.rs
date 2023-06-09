@@ -198,7 +198,7 @@ fn get_workflow_runs() -> Result<WorkflowRuns> {
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
         eprintln!("Command failed with error:\n{}", stderr);
-        return Err(anyhow!("this command failed..."));
+        return Err(anyhow!("failed getting actions run..."));
     }
 }
 
