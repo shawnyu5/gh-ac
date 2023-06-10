@@ -4,6 +4,7 @@ use crate::gh::get_workflow_runs;
 use clap::Subcommand;
 use clap::{command, Args, Parser};
 use dialoguer::Confirm;
+use gh::WorkflowRun;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
@@ -55,7 +56,7 @@ fn main() {
                 return;
             }
 
-            let (is_staged, _) = git::check_staged_files();
+            let is_staged = git::check_staged_files();
 
             if !is_staged {
                 println!("no staged files, exiting");
@@ -72,46 +73,16 @@ fn main() {
 
             git::push(false).unwrap();
 
-            loop {
-                let current_workflow_runs = get_workflow_runs(None).expect("workflow runs from gh");
-                // dbg!(&initial_workflow_runs);
-                // dbg!(&current_workflow_runs);
-
-                let same = {
-                    initial_workflow_runs
-                        .clone()
-                        .workflow_runs
-                        .unwrap()
-                        .get(0)
-                        .unwrap()
-                        == current_workflow_runs
-                            .clone()
-                            .workflow_runs
-                            .unwrap()
-                            .get(0)
-                            .unwrap()
-                };
-
-                dbg!(&same);
-                if same {
-                    std::thread::sleep(std::time::Duration::from_secs(5));
-                    continue;
-                }
-                println!(
-                    "Workflow run url: {}",
-                    current_workflow_runs
-                        .clone()
-                        .workflow_runs
-                        .unwrap()
-                        .get(0)
-                        .unwrap()
-                        .html_url
-                );
-                break;
-            }
+            check_for_new_workflow(
+                initial_workflow_runs
+                    .workflow_runs
+                    .unwrap()
+                    .get(0)
+                    .unwrap_or(&WorkflowRun::default()),
+            )
         }
         Commands::Force => {
-            let (is_staged, _) = git::check_staged_files();
+            let is_staged = git::check_staged_files();
             if is_staged {
                 if !Confirm::new()
                     .with_prompt("There are staged changes. Are you sure you want to force push?")
@@ -129,41 +100,13 @@ fn main() {
             git::commit_amend_no_edit().unwrap();
             git::push(true).unwrap();
 
-            loop {
-                let current_workflow_runs = get_workflow_runs(None).expect("workflow runs from gh");
-
-                let same = {
-                    initial_workflow_runs
-                        .clone()
-                        .workflow_runs
-                        .unwrap()
-                        .get(0)
-                        .unwrap()
-                        == current_workflow_runs
-                            .clone()
-                            .workflow_runs
-                            .unwrap()
-                            .get(0)
-                            .unwrap()
-                };
-
-                dbg!(&same);
-                if same {
-                    std::thread::sleep(std::time::Duration::from_secs(5));
-                    continue;
-                }
-                println!(
-                    "Workflow run url: {}",
-                    current_workflow_runs
-                        .clone()
-                        .workflow_runs
-                        .unwrap()
-                        .get(0)
-                        .unwrap()
-                        .html_url
-                );
-                break;
-            }
+            check_for_new_workflow(
+                initial_workflow_runs
+                    .workflow_runs
+                    .unwrap()
+                    .get(0)
+                    .unwrap_or(&WorkflowRun::default()),
+            )
         }
         Commands::Config(manage_config) => {
             // hostname is a required field, so we can unwrap it here
@@ -173,5 +116,42 @@ fn main() {
             confy::store("gh-ac", None, config).unwrap();
             println!("config saved");
         }
+    }
+}
+
+/// check for new workflow runs
+///
+/// * `old_workflow_run`: the latest workflow run in the repo
+fn check_for_new_workflow(old_workflow_run: &WorkflowRun) {
+    loop {
+        let current_workflow_runs = get_workflow_runs(None).expect("workflow runs from gh");
+
+        let same = {
+            old_workflow_run
+                == current_workflow_runs
+                    .clone()
+                    .workflow_runs
+                    .unwrap()
+                    .get(0)
+                    .unwrap()
+        };
+
+        dbg!(&same);
+        if same {
+            println!("waiting for 5 seconds");
+            std::thread::sleep(std::time::Duration::from_secs(5));
+            continue;
+        }
+        println!(
+            "{}",
+            current_workflow_runs
+                .clone()
+                .workflow_runs
+                .unwrap()
+                .get(0)
+                .unwrap()
+                .html_url
+        );
+        break;
     }
 }

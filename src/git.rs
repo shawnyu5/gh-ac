@@ -43,8 +43,8 @@ pub fn push(force: bool) -> Result<()> {
 }
 
 /// check if there are any staged files
-/// return a tuple of (bool, String) where the bool is true if there are staged files, containing the staged file names. False other wise
-pub fn check_staged_files() -> (bool, String) {
+/// return true if there are staged files. False other wise
+pub fn check_staged_files() -> bool {
     let output = Command::new("git")
         .arg("diff")
         .arg("--staged")
@@ -55,9 +55,9 @@ pub fn check_staged_files() -> (bool, String) {
     let stdout = String::from_utf8_lossy(&output.stdout);
     println!("{}", stdout);
     if stdout == "" {
-        return (false, String::from(""));
+        return false;
     } else {
-        return (true, stdout.to_string());
+        return true;
     }
 }
 

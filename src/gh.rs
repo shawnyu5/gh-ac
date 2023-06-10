@@ -63,21 +63,8 @@ pub fn get_workflow_runs<'a>(hostname: Option<&'a str>) -> Result<WorkflowRuns> 
                 "Command failed with error:\n{}\nRetrying with custom gh hostname",
                 stderr
             );
-            return get_workflow_runs(Some(conf.gh_hostname.unwrap_or_default().as_str()));
+            return get_workflow_runs(conf.gh_hostname.as_deref());
         }
         return Err(anyhow!("failed getting actions run...: {}", stderr));
-
-        // let host_name = conf.clone().gh_hostname.unwrap();
-        // if conf.gh_hostname.is_some() {
-        // args.push("--hostname");
-        // args.push(host_name.as_str());
-        // }
-        // return match Command::new("gh").args(args).output() {
-        // Ok(output) => {
-        // let stdout = String::from_utf8_lossy(&output.stdout);
-        // return Ok(serde_json::from_str::<WorkflowRuns>(&stdout)?);
-        // }
-        // Err(e) => Err(anyhow!("failed getting actions run...: {}", e)),
-        // };
     }
 }
