@@ -136,7 +136,7 @@ fn check_for_new_workflow(old_workflow_run: &WorkflowRun) {
                     .unwrap()
         };
 
-        dbg!(&same);
+        println!("new workflow as not started");
         if same {
             println!("waiting for 5 seconds");
             std::thread::sleep(std::time::Duration::from_secs(5));
