@@ -1,8 +1,8 @@
 mod gh;
 mod git;
 use crate::gh::get_workflow_runs;
-use clap::Subcommand;
 use clap::{command, Args, Parser};
+use clap::{ArgAction, Subcommand};
 use dialoguer::Confirm;
 use gh::WorkflowRun;
 use serde_derive::Deserialize;
@@ -17,27 +17,27 @@ use serde_derive::Serialize;
 struct Cli {
     #[command(subcommand)]
     commands: Commands,
-    // /// if all changes should be committed
-    // #[arg(long, short)]
-    // all: Option<bool>,
 }
 
 #[derive(Subcommand)]
 enum Commands {
     /// commit the current changes
-    Commit,
+    Commit(CommitArgs),
     /// force push to trigger a new workflow run
     Force,
     /// set configuration values
     Config(ConfigArgs),
 }
 
-// #[derive(Args)]
-// struct CommitArgs {
-// /// git commit message
-// // #[arg(long, short)]
-// // message: Vec<String>,
-// }
+#[derive(Args)]
+struct CommitArgs {
+    /// add all unstaged changes before commiting
+    #[arg(long, short, action = ArgAction::SetTrue)]
+    all: bool,
+    // /// git commit message
+    // #[arg(long, short)]
+    // message: Vec<String>,
+}
 
 #[derive(Args, Serialize, Deserialize)]
 struct ConfigArgs {
@@ -53,13 +53,20 @@ struct Config {
 fn main() {
     let cli = Cli::parse();
     match &cli.commands {
-        Commands::Commit => {
+        Commands::Commit(args) => {
             let initial_workflow_runs = get_workflow_runs(None).expect("workflow runs from `gh`");
             if initial_workflow_runs.total_count == 0 {
                 println!("no workflow runs found, exiting");
                 return;
             }
 
+            dbg!(&args.all);
+            if args.all {
+                match git::add_all() {
+                    Some(e) => panic!("{}", e),
+                    None => {}
+                };
+            }
             let is_staged = git::check_staged_files();
 
             if !is_staged {

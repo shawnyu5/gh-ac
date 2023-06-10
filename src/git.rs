@@ -49,6 +49,7 @@ pub fn push(force: bool) -> Result<()> {
 }
 
 /// check if there are any staged files
+///
 /// return true if there are staged files. False other wise
 pub fn check_staged_files() -> bool {
     let output = Command::new("git")
@@ -68,10 +69,11 @@ pub fn check_staged_files() -> bool {
 }
 
 /// `git add -A`
-/// returns None if successful, Some(Error) if failed
+///
+/// returns Some(error) if there was an error. None otherwise
 pub fn add_all() -> Option<Error> {
-    let output = Command::new("git").arg("add").arg("-A").spawn();
-    return output.err();
+    let err = Command::new("git").arg("add").arg("-A").spawn().err();
+    return err;
 }
 
 /// `git commit --amend --no-edit`
