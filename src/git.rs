@@ -1,12 +1,18 @@
 use anyhow::{anyhow, Result};
 use dialoguer::Editor;
 use std::io::Error;
+use std::ops::Deref;
 use std::process::Command;
 
-/// prompts user to enter a commit message, then commits the changes to git
-/// returns the commit message in the Option if successful. Commit message will return None if user did not enter a commit message, or did not save
-pub fn commit() -> Result<Option<String>> {
-    let commit_msg: Option<String> = Editor::new().edit("Enter a commit message").unwrap_or(None);
+/// performs `git commit`
+/// * `message` - commit message to use. If None, will prompt user to enter a commit message
+///
+/// returns the commit message in the Option if successfully committed. Will return None if user did not enter a commit message, or did not save
+pub fn commit<'a>(message: &Option<String>) -> Result<Option<String>> {
+    let commit_msg: Option<String> = match message {
+        Some(message) => Some(message.deref().to_string()),
+        None => Editor::new().edit("Enter a commit message").unwrap_or(None),
+    };
 
     if commit_msg.is_none() || commit_msg.as_ref().unwrap() == "" {
         return Ok(None);

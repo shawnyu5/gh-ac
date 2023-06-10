@@ -17,9 +17,6 @@ use serde_derive::Serialize;
 struct Cli {
     #[command(subcommand)]
     commands: Commands,
-    // /// git commit message
-    // #[arg(long, short)]
-    // message: Option<String>,
     // /// if all changes should be committed
     // #[arg(long, short)]
     // all: Option<bool>,
@@ -29,14 +26,21 @@ struct Cli {
 enum Commands {
     /// commit the current changes
     Commit,
-    /// force push the current changes
+    /// force push to trigger a new workflow run
     Force,
     /// set configuration values
-    Config(ManageConfig), // Config { set: Option<String> },
+    Config(ConfigArgs),
 }
 
+// #[derive(Args)]
+// struct CommitArgs {
+// /// git commit message
+// // #[arg(long, short)]
+// // message: Vec<String>,
+// }
+
 #[derive(Args, Serialize, Deserialize)]
-struct ManageConfig {
+struct ConfigArgs {
     #[arg(long)]
     hostname: Option<String>,
 }
@@ -63,7 +67,7 @@ fn main() {
                 return;
             }
 
-            let commit_msg = git::commit().unwrap();
+            let commit_msg = git::commit(&None).unwrap();
 
             if commit_msg.is_none() {
                 println!("no commit message was entered, exiting");
@@ -110,7 +114,7 @@ fn main() {
         }
         Commands::Config(manage_config) => {
             // hostname is a required field, so we can unwrap it here
-            let config = ManageConfig {
+            let config = ConfigArgs {
                 hostname: manage_config.hostname.clone(),
             };
             confy::store("gh-ac", None, config).unwrap();
