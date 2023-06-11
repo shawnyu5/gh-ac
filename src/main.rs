@@ -1,10 +1,9 @@
 mod gh;
 mod git;
-use crate::gh::get_workflow_runs;
+use crate::gh::Gh;
 use clap::{command, Args, Parser};
 use clap::{ArgAction, Subcommand};
 use dialoguer::Confirm;
-use gh::WorkflowRun;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
@@ -39,7 +38,7 @@ struct CommitArgs {
     // message: Vec<String>,
 }
 
-#[derive(Args, Serialize, Deserialize)]
+#[derive(Args, Serialize, Deserialize, Default)]
 struct ConfigArgs {
     #[arg(long)]
     hostname: Option<String>,
@@ -52,24 +51,22 @@ struct Config {
 }
 fn main() {
     let cli = Cli::parse();
+    let config: ConfigArgs = confy::load("gh-ac", None).unwrap();
+    let gh = Gh::new(&config.hostname.as_deref());
+
     match &cli.commands {
         Commands::Commit(args) => {
-            let initial_workflow_runs = get_workflow_runs(None).expect("workflow runs from `gh`");
-            if initial_workflow_runs.total_count == 0 {
-                println!("no workflow runs found, exiting");
-                return;
-            }
+            let selected_workflow_name = gh.select_workflow_name();
+            let initial_workflow_run = gh.get_workflow_run_by_name(&selected_workflow_name);
 
-            dbg!(&args.all);
             if args.all {
                 match git::add_all() {
                     Some(e) => panic!("{}", e),
                     None => {}
                 };
             }
-            let is_staged = git::check_staged_files();
 
-            if !is_staged {
+            if !git::check_staged_files() {
                 println!("no staged files, exiting");
                 return;
             }
@@ -84,40 +81,32 @@ fn main() {
 
             git::push(false).unwrap();
 
-            check_for_new_workflow(
-                initial_workflow_runs
-                    .workflow_runs
-                    .unwrap()
-                    .get(0)
-                    .unwrap_or(&WorkflowRun::default()),
-            )
+            gh.check_for_new_workflow_run_by_id(&initial_workflow_run.unwrap());
         }
         Commands::Force => {
-            let is_staged = git::check_staged_files();
-            if is_staged {
-                if !Confirm::new()
+            let selected_workflow_name = gh.select_workflow_name();
+
+            if git::check_staged_files()
+                && !Confirm::new()
                     .with_prompt("There are staged changes. Are you sure you want to force push?")
                     .default(false)
                     .interact()
                     .unwrap()
+            {
                 {
                     println!("Ok, aborting");
                     return;
                 }
             }
 
-            let initial_workflow_runs = get_workflow_runs(None).expect("workflow runs from `gh`");
+            let initial_workflow_run = gh
+                .get_workflow_run_by_name(&selected_workflow_name)
+                .unwrap();
 
             git::commit_amend_no_edit().unwrap();
             git::push(true).unwrap();
 
-            check_for_new_workflow(
-                initial_workflow_runs
-                    .workflow_runs
-                    .unwrap()
-                    .get(0)
-                    .unwrap_or(&WorkflowRun::default()),
-            )
+            gh.check_for_new_workflow_run_by_id(&initial_workflow_run)
         }
         Commands::Config(manage_config) => {
             // hostname is a required field, so we can unwrap it here
@@ -127,42 +116,5 @@ fn main() {
             confy::store("gh-ac", None, config).unwrap();
             println!("config saved");
         }
-    }
-}
-
-/// check for new workflow runs
-///
-/// * `old_workflow_run`: the latest workflow run in the repo
-fn check_for_new_workflow(old_workflow_run: &WorkflowRun) {
-    loop {
-        let current_workflow_runs = get_workflow_runs(None).expect("workflow runs from gh");
-
-        let same = {
-            old_workflow_run
-                == current_workflow_runs
-                    .clone()
-                    .workflow_runs
-                    .unwrap()
-                    .get(0)
-                    .unwrap()
-        };
-
-        println!("new workflow as not started");
-        if same {
-            println!("waiting for 5 seconds");
-            std::thread::sleep(std::time::Duration::from_secs(5));
-            continue;
-        }
-        println!(
-            "{}",
-            current_workflow_runs
-                .clone()
-                .workflow_runs
-                .unwrap()
-                .get(0)
-                .unwrap()
-                .html_url
-        );
-        break;
     }
 }
