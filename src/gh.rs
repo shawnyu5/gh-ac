@@ -1,4 +1,3 @@
-use crate::Config;
 use anyhow::{anyhow, Result};
 use dialoguer::{console::Term, theme::ColorfulTheme, FuzzySelect};
 use serde_derive::{Deserialize, Serialize};
