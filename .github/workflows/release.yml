@@ -26,7 +26,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: cli/gh-extension-precompile@v1
-        # TODO: idk why this doesnt work AHHHH
         if: ${{ steps.semantic.outputs.new-release-published }} == true
         with:
           build_script_override: "script/build.sh"
