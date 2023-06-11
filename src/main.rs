@@ -85,7 +85,6 @@ fn main() {
         }
         Commands::Force => {
             let selected_workflow_name = gh.select_workflow_name();
-            let initial_workflow_run = gh.get_workflow_run_by_name(&selected_workflow_name);
 
             if git::check_staged_files()
                 && !Confirm::new()

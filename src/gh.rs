@@ -119,7 +119,6 @@ impl Gh<'_> {
         println!("waiting for 5 seconds");
         std::thread::sleep(std::time::Duration::from_secs(5));
         loop {
-            // let current_workflow_runs = get_workflow_runs(None).expect("workflow runs from gh");
             let current_workflow_run = self
                 .get_workflow_run_by_name(&old_workflow_run.name)
                 .unwrap_or_default();
