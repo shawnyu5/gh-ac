@@ -3,8 +3,11 @@ use dialoguer::{console::Term, theme::ColorfulTheme, FuzzySelect};
 use serde_derive::{Deserialize, Serialize};
 use std::{
     fmt::Display,
+    io,
     process::{self, Command},
 };
+
+use crate::Config;
 
 #[derive(Default, Debug)]
 pub struct Gh<'a> {
@@ -32,10 +35,17 @@ impl Gh<'_> {
     ///
     /// It does this by running `gh api users`, if the command fails, then it is assumed that the custom hostname should be used
     fn check_should_use_custom_hostname(&mut self) {
-        let args = self.construct_gh_api_args(&mut vec!["users"]);
-        match Command::new("gh").args(args).output() {
-            Ok(_) => self.should_use_custom_hostname = false,
-            Err(_) => self.should_use_custom_hostname = true,
+        let args = self.construct_gh_api_args(&mut vec!["/repos/{owner}/{repo}/actions/runs"]);
+        if Command::new("gh")
+            .args(args)
+            .output()
+            .unwrap()
+            .status
+            .success()
+        {
+            self.should_use_custom_hostname = false
+        } else {
+            self.should_use_custom_hostname = true
         }
     }
     /// construct arguments for `gh api`, including the optional `--hostname` if applicable
@@ -43,19 +53,37 @@ impl Gh<'_> {
     /// * `args`: the args to pass to `gh api <args>`
     ///
     /// returns the args to pass to `gh api <args>`
-    fn construct_gh_api_args<'a>(&'a self, args: &mut Vec<&'a str>) -> Vec<&'a str> {
-        return if self.should_use_custom_hostname {
+    fn construct_gh_api_args<'a>(&self, args: &mut Vec<&'a str>) -> Vec<&'a str> {
+        if self.should_use_custom_hostname {
             match self.hostname {
-                Some(hostname) => vec!["api", "--hostname", hostname],
+                Some(hostname) => {
+                    let mut gh_args = vec!["api", "--hostname", hostname];
+                    gh_args.append(args);
+                    return gh_args;
+                }
                 None => {
-                    let mut gh_args = vec!["api"];
+                    print!("WARNING: no custom hostname specified. Please enter a gh hostname: ");
+                    let mut hostname: String = String::default();
+                    io::stdin()
+                        .read_line(&mut hostname)
+                        .expect("a gh cli host name");
+
+                    let mut gh_args = vec!["api", "--hostname"];
+                    gh_args.push(hostname.trim());
+                    confy::store(
+                        "gh-ac",
+                        None,
+                        Config {
+                            gh_hostname: Some(hostname.to_string()),
+                        },
+                    );
                     gh_args.append(args);
                     return gh_args;
                 }
             }
         } else {
-            let mut gh_args = vec!["api"];
-            gh_args.append(args.as_mut());
+            let mut gh_args = vec!["api", "--hostname", self.hostname.unwrap()];
+            gh_args.append(args);
             return gh_args;
         };
     }
@@ -97,6 +125,7 @@ impl Gh<'_> {
     pub fn repo_workflows(&self) -> Result<Workflows> {
         let args = self.construct_gh_api_args(&mut vec!["/repos/{owner}/{repo}/actions/workflows"]);
 
+        dbg!(&args);
         let output = Command::new("gh")
             .args(&args)
             .output()
