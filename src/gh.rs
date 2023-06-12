@@ -3,11 +3,8 @@ use dialoguer::{console::Term, theme::ColorfulTheme, FuzzySelect};
 use serde_derive::{Deserialize, Serialize};
 use std::{
     fmt::Display,
-    io,
     process::{self, Command},
 };
-
-use crate::Config;
 
 #[derive(Default, Debug)]
 pub struct Gh<'a> {
@@ -53,7 +50,7 @@ impl Gh<'_> {
     /// * `args`: the args to pass to `gh api <args>`
     ///
     /// returns the args to pass to `gh api <args>`
-    fn construct_gh_api_args<'a>(&self, args: &mut Vec<&'a str>) -> Vec<&'a str> {
+    fn construct_gh_api_args<'a>(&'a self, args: &mut Vec<&'a str>) -> Vec<&'a str> {
         if self.should_use_custom_hostname {
             match self.hostname {
                 Some(hostname) => {
@@ -62,23 +59,9 @@ impl Gh<'_> {
                     return gh_args;
                 }
                 None => {
-                    print!("WARNING: no custom hostname specified. Please enter a gh hostname: ");
-                    let mut hostname: String = String::default();
-                    io::stdin()
-                        .read_line(&mut hostname)
-                        .expect("a gh cli host name");
-
-                    let mut gh_args = vec!["api", "--hostname"];
-                    gh_args.push(hostname.trim());
-                    confy::store(
-                        "gh-ac",
-                        None,
-                        Config {
-                            gh_hostname: Some(hostname.to_string()),
-                        },
+                    panic!(
+                        "no hostname specified. Add a hostname using `config --hostname <HOSTNAME>"
                     );
-                    gh_args.append(args);
-                    return gh_args;
                 }
             }
         } else {
