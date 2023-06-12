@@ -6,12 +6,21 @@ use std::{
     process::{self, Command},
 };
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct Gh<'a> {
     /// custom github api hostname
     hostname: Option<&'a str>,
     /// if the custom hostname should be used in this repo
     should_use_custom_hostname: bool,
+}
+
+impl Default for Gh<'_> {
+    fn default() -> Self {
+        Self {
+            hostname: Default::default(),
+            should_use_custom_hostname: false,
+        }
+    }
 }
 impl Display for Workflow {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
