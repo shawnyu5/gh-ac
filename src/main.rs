@@ -23,7 +23,7 @@ enum Commands {
     /// commit the current changes
     Commit(CommitArgs),
     /// force push to trigger a new workflow run
-    Force,
+    Force(ForceArgs),
     /// set configuration values
     Config(ConfigArgs),
 }
@@ -33,9 +33,19 @@ struct CommitArgs {
     /// add all unstaged changes before commiting
     #[arg(long, short, action = ArgAction::SetTrue)]
     all: bool,
+    /// the workflow name to search for. NOTE this is NOT case sensitive
+    #[arg(long, short)]
+    workflow_name: Option<String>,
     // /// git commit message
     // #[arg(long, short)]
     // message: Vec<String>,
+}
+
+#[derive(Args)]
+struct ForceArgs {
+    /// the workflow name to search for. NOTE this is NOT case sensitive
+    #[arg(long, short)]
+    workflow_name: Option<String>,
 }
 
 #[derive(Args, Serialize, Deserialize, Default)]
@@ -56,7 +66,13 @@ fn main() {
 
     match &cli.commands {
         Commands::Commit(args) => {
-            let selected_workflow_name = gh.select_workflow_name();
+            let selected_workflow_name = {
+                if args.workflow_name.is_none() {
+                    gh.select_workflow_name()
+                } else {
+                    args.workflow_name.clone().unwrap()
+                }
+            };
             let initial_workflow_run = gh.get_workflow_run_by_name(&selected_workflow_name);
 
             if args.all {
@@ -83,8 +99,14 @@ fn main() {
 
             gh.check_for_new_workflow_run_by_id(&initial_workflow_run.unwrap());
         }
-        Commands::Force => {
-            let selected_workflow_name = gh.select_workflow_name();
+        Commands::Force(args) => {
+            let selected_workflow_name = {
+                if args.workflow_name.is_none() {
+                    gh.select_workflow_name()
+                } else {
+                    args.workflow_name.clone().unwrap()
+                }
+            };
 
             if git::check_staged_files()
                 && !Confirm::new()

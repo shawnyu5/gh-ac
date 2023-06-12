@@ -76,7 +76,7 @@ impl Gh<'_> {
             let workflow_runs = serde_json::from_str::<WorkflowRuns>(&stdout)?;
 
             for r in workflow_runs.workflow_runs.unwrap() {
-                if &r.name == name {
+                if &r.name.to_lowercase() == &name.to_lowercase() {
                     return Ok(r);
                 }
             }
