@@ -60,7 +60,7 @@ struct ConfigArgs {
 #[derive(Default, Debug, Serialize, Deserialize, Clone)]
 struct Config {
     /// github custom hostname
-    gh_hostname: Option<String>,
+    hostname: Option<String>,
 }
 
 fn main() {
@@ -89,7 +89,7 @@ fn main() {
 
     // CLI config values
     let config: Config = confy::load("gh-ac", None).unwrap();
-    let gh = Gh::new(&config.gh_hostname.as_deref());
+    let gh = Gh::new(&config.hostname.as_deref());
 
     match cli.subcommand() {
         Some(("commit", args)) => {
