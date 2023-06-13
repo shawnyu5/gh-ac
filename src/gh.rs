@@ -1,17 +1,27 @@
 use anyhow::{anyhow, Result};
 use dialoguer::{console::Term, theme::ColorfulTheme, FuzzySelect};
+use log::debug;
 use serde_derive::{Deserialize, Serialize};
 use std::{
     fmt::Display,
     process::{self, Command},
 };
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct Gh<'a> {
     /// custom github api hostname
     hostname: Option<&'a str>,
     /// if the custom hostname should be used in this repo
     should_use_custom_hostname: bool,
+}
+
+impl Default for Gh<'_> {
+    fn default() -> Self {
+        Self {
+            hostname: Default::default(),
+            should_use_custom_hostname: false,
+        }
+    }
 }
 impl Display for Workflow {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -32,30 +42,47 @@ impl Gh<'_> {
     ///
     /// It does this by running `gh api users`, if the command fails, then it is assumed that the custom hostname should be used
     fn check_should_use_custom_hostname(&mut self) {
-        let args = self.construct_gh_api_args(&mut vec!["users"]);
-        match Command::new("gh").args(args).output() {
-            Ok(_) => self.should_use_custom_hostname = false,
-            Err(_) => self.should_use_custom_hostname = true,
+        // let args = self.construct_gh_api_args(&mut vec!["/repos/{owner}/{repo}/actions/runs"]);
+        let args = vec![
+            "api",
+            "/repos/{owner}/{repo}/actions/runs",
+            "--hostname",
+            self.hostname.unwrap_or_default(),
+        ];
+        if Command::new("gh")
+            .args(args)
+            .output()
+            .unwrap()
+            .status
+            .success()
+        {
+            self.should_use_custom_hostname = true
+        } else {
+            self.should_use_custom_hostname = false
         }
+        dbg!(&self.should_use_custom_hostname);
     }
     /// construct arguments for `gh api`, including the optional `--hostname` if applicable
-    ///
     /// * `args`: the args to pass to `gh api <args>`
     ///
     /// returns the args to pass to `gh api <args>`
     fn construct_gh_api_args<'a>(&'a self, args: &mut Vec<&'a str>) -> Vec<&'a str> {
-        return if self.should_use_custom_hostname {
+        if self.should_use_custom_hostname {
             match self.hostname {
-                Some(hostname) => vec!["api", "--hostname", hostname],
-                None => {
-                    let mut gh_args = vec!["api"];
+                Some(hostname) => {
+                    let mut gh_args = vec!["api", "--hostname", hostname];
                     gh_args.append(args);
                     return gh_args;
+                }
+                None => {
+                    panic!(
+                        "no hostname specified. Add a hostname using `config --hostname <HOSTNAME>"
+                    );
                 }
             }
         } else {
             let mut gh_args = vec!["api"];
-            gh_args.append(args.as_mut());
+            gh_args.append(args);
             return gh_args;
         };
     }
@@ -83,9 +110,8 @@ impl Gh<'_> {
             return Err(anyhow!("No workflow with name {} found...", name));
         } else {
             let stderr = String::from_utf8_lossy(&output.stderr);
-
             // if there was no hostname passed in, retry with a hostname
-            eprintln!("Command failed with error: {}", stderr);
+            println!("Command failed with error: {}", stderr);
             return Err(anyhow!("failed getting actions run..."));
         }
     }
@@ -97,6 +123,7 @@ impl Gh<'_> {
     pub fn repo_workflows(&self) -> Result<Workflows> {
         let args = self.construct_gh_api_args(&mut vec!["/repos/{owner}/{repo}/actions/workflows"]);
 
+        debug!("hello");
         let output = Command::new("gh")
             .args(&args)
             .output()
@@ -170,7 +197,7 @@ pub struct WorkflowRun {
     pub id: i64,
     pub name: String,
     pub head_branch: String,
-    pub display_title: String,
+    pub display_title: Option<String>,
     pub status: String,
     pub conclusion: Option<String>,
     pub created_at: String,

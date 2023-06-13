@@ -1,8 +1,9 @@
 mod gh;
 mod git;
 use crate::gh::Gh;
-use clap::{command, Args, Parser};
+use clap::{arg, command, ArgMatches, Args, Command, Parser};
 use clap::{ArgAction, Subcommand};
+use cli_log::*; // also import logging macros
 use dialoguer::Confirm;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
@@ -16,6 +17,8 @@ use serde_derive::Serialize;
 struct Cli {
     #[command(subcommand)]
     commands: Commands,
+    // #[command(flatten)]
+    // verbose: Verbosity<InfoLevel>,
 }
 
 #[derive(Subcommand)]
@@ -59,7 +62,112 @@ struct Config {
     /// github custom hostname
     gh_hostname: Option<String>,
 }
+
 fn main() {
+    init_cli_log!();
+    let cli: ArgMatches = command!()
+        .subcommand(
+            Command::new("commit")
+                .about("commit the current")
+                .arg(arg!(-w --workflow <WORKFLOW_NAME> "name of the workflow to return"))
+                .arg(arg!(-a --all "add all unstaged changes before commiting")),
+        )
+        .subcommand(
+            Command::new("force")
+                .about("force push to trigger a new workflow run")
+                .arg(arg!(-w --workflow <WORKFLOW_NAME> "name of the workflow to return")),
+        )
+        .subcommand(
+            Command::new("config")
+                .about("set configuration values")
+                .arg(
+                    arg!(--hostname <HOSTNAME> "github hostname. ie mycorp.github.com")
+                        .required(true),
+                ),
+        )
+        .get_matches();
+
+    // CLI config values
+    let config: ConfigArgs = confy::load("gh-ac", None).unwrap();
+    let gh = Gh::new(&config.hostname.as_deref());
+
+    match cli.subcommand() {
+        Some(("commit", args)) => {
+            if !git::check_staged_files() {
+                println!("no staged files, exiting");
+                return;
+            }
+
+            let arg_workflow_name = args.get_one::<String>("workflow");
+            let arg_commit_all = args.get_one::<bool>("all");
+
+            let selected_workflow_name = {
+                if arg_workflow_name.is_none() {
+                    gh.select_workflow_name()
+                } else {
+                    arg_workflow_name.clone().unwrap().to_string()
+                }
+            };
+            let initial_workflow_run = gh.get_workflow_run_by_name(&selected_workflow_name);
+
+            if *arg_commit_all.unwrap_or(&false) {
+                match git::add_all() {
+                    Some(e) => panic!("{}", e),
+                    None => {}
+                };
+            }
+
+            let commit_msg = git::commit(&None).unwrap();
+
+            if commit_msg.is_none() {
+                println!("no commit message was entered, exiting");
+                return;
+            }
+            println!("commiting successful: {}", commit_msg.unwrap());
+
+            git::push(false).unwrap();
+
+            gh.check_for_new_workflow_run_by_id(&initial_workflow_run.unwrap());
+        }
+        Some(("force", args)) => {
+            let arg_workflow_name = args.get_one::<String>("workflow");
+            let selected_workflow_name = {
+                if arg_workflow_name.is_none() {
+                    gh.select_workflow_name()
+                } else {
+                    arg_workflow_name.clone().unwrap().to_string()
+                }
+            };
+
+            if git::check_staged_files()
+                && !Confirm::new()
+                    .with_prompt("There are staged changes. Are you sure you want to force push?")
+                    .default(false)
+                    .interact()
+                    .unwrap()
+            {
+                {
+                    println!("Ok, aborting");
+                    return;
+                }
+            }
+
+            let initial_workflow_run = gh
+                .get_workflow_run_by_name(&selected_workflow_name)
+                .unwrap();
+
+            git::commit_amend_no_edit().unwrap();
+            git::push(true).unwrap();
+
+            gh.check_for_new_workflow_run_by_id(&initial_workflow_run)
+        }
+        _ => {
+            unreachable!("Exhausted list of subcommands and subcommand_required prevents `None`")
+        }
+    }
+}
+
+fn old() {
     let cli = Cli::parse();
     let config: ConfigArgs = confy::load("gh-ac", None).unwrap();
     let gh = Gh::new(&config.hostname.as_deref());
