@@ -42,7 +42,13 @@ impl Gh<'_> {
     ///
     /// It does this by running `gh api users`, if the command fails, then it is assumed that the custom hostname should be used
     fn check_should_use_custom_hostname(&mut self) {
-        let args = self.construct_gh_api_args(&mut vec!["/repos/{owner}/{repo}/actions/runs"]);
+        // let args = self.construct_gh_api_args(&mut vec!["/repos/{owner}/{repo}/actions/runs"]);
+        let args = vec![
+            "api",
+            "/repos/{owner}/{repo}/actions/runs",
+            "--hostname",
+            self.hostname.unwrap_or_default(),
+        ];
         if Command::new("gh")
             .args(args)
             .output()
@@ -50,14 +56,13 @@ impl Gh<'_> {
             .status
             .success()
         {
-            self.should_use_custom_hostname = false
-        } else {
             self.should_use_custom_hostname = true
+        } else {
+            self.should_use_custom_hostname = false
         }
         dbg!(&self.should_use_custom_hostname);
     }
     /// construct arguments for `gh api`, including the optional `--hostname` if applicable
-    ///
     /// * `args`: the args to pass to `gh api <args>`
     ///
     /// returns the args to pass to `gh api <args>`
@@ -92,6 +97,7 @@ impl Gh<'_> {
             .args(&args)
             .output()
             .expect("to get workflow runs from `gh`");
+        dbg!(&output);
 
         if output.status.success() {
             let stdout = String::from_utf8_lossy(&output.stdout);
@@ -105,9 +111,8 @@ impl Gh<'_> {
             return Err(anyhow!("No workflow with name {} found...", name));
         } else {
             let stderr = String::from_utf8_lossy(&output.stderr);
-
             // if there was no hostname passed in, retry with a hostname
-            eprintln!("Command failed with error: {}", stderr);
+            println!("Command failed with error: {}", stderr);
             return Err(anyhow!("failed getting actions run..."));
         }
     }
