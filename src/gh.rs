@@ -97,7 +97,6 @@ impl Gh<'_> {
             .args(&args)
             .output()
             .expect("to get workflow runs from `gh`");
-        dbg!(&output);
 
         if output.status.success() {
             let stdout = String::from_utf8_lossy(&output.stdout);
