@@ -198,7 +198,7 @@ pub struct WorkflowRun {
     pub id: i64,
     pub name: String,
     pub head_branch: String,
-    pub display_title: String,
+    pub display_title: Option<String>,
     pub status: String,
     pub conclusion: Option<String>,
     pub created_at: String,
