@@ -45,7 +45,7 @@ impl Gh<'_> {
         // let args = self.construct_gh_api_args(&mut vec!["/repos/{owner}/{repo}/actions/runs"]);
         let args = vec!["api", "/repos/{owner}/{repo}/actions/runs"];
         let cmd = Command::new("gh").args(args).output().unwrap();
-        dbg!(&cmd);
+        // dbg!(&cmd);
         if cmd.status.success() {
             self.should_use_custom_hostname = false
         } else {
