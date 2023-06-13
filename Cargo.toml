@@ -9,7 +9,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.71"
-clap = { version = "4.3.2", features = ["derive"] }
+clap = { version = "4.3.2", features = ["derive", "cargo"] }
 confy = { version = "0.5.1", features = ["yaml_conf"], default-features = false }
 dialoguer = { version = "0.10.4", features = ["fuzzy-select"] }
 log = "0.4.18"
