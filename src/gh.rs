@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use dialoguer::{console::Term, theme::ColorfulTheme, FuzzySelect};
+use log::debug;
 use serde_derive::{Deserialize, Serialize};
 use std::{
     fmt::Display,
@@ -53,6 +54,7 @@ impl Gh<'_> {
         } else {
             self.should_use_custom_hostname = true
         }
+        dbg!(&self.should_use_custom_hostname);
     }
     /// construct arguments for `gh api`, including the optional `--hostname` if applicable
     ///
@@ -74,7 +76,7 @@ impl Gh<'_> {
                 }
             }
         } else {
-            let mut gh_args = vec!["api", "--hostname", self.hostname.unwrap()];
+            let mut gh_args = vec!["api"];
             gh_args.append(args);
             return gh_args;
         };
@@ -117,7 +119,7 @@ impl Gh<'_> {
     pub fn repo_workflows(&self) -> Result<Workflows> {
         let args = self.construct_gh_api_args(&mut vec!["/repos/{owner}/{repo}/actions/workflows"]);
 
-        dbg!(&args);
+        debug!("hello");
         let output = Command::new("gh")
             .args(&args)
             .output()
