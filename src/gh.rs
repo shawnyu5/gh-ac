@@ -43,22 +43,13 @@ impl Gh<'_> {
     /// It does this by running `gh api users`, if the command fails, then it is assumed that the custom hostname should be used
     fn check_should_use_custom_hostname(&mut self) {
         // let args = self.construct_gh_api_args(&mut vec!["/repos/{owner}/{repo}/actions/runs"]);
-        let args = vec![
-            "api",
-            "/repos/{owner}/{repo}/actions/runs",
-            "--hostname",
-            self.hostname.unwrap_or_default(),
-        ];
-        if Command::new("gh")
-            .args(args)
-            .output()
-            .unwrap()
-            .status
-            .success()
-        {
-            self.should_use_custom_hostname = true
-        } else {
+        let args = vec!["api", "/repos/{owner}/{repo}/actions/runs"];
+        let cmd = Command::new("gh").args(args).output().unwrap();
+        dbg!(&cmd);
+        if cmd.status.success() {
             self.should_use_custom_hostname = false
+        } else {
+            self.should_use_custom_hostname = true
         }
         dbg!(&self.should_use_custom_hostname);
     }

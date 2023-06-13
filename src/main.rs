@@ -88,8 +88,8 @@ fn main() {
         .get_matches();
 
     // CLI config values
-    let config: ConfigArgs = confy::load("gh-ac", None).unwrap();
-    let gh = Gh::new(&config.hostname.as_deref());
+    let config: Config = confy::load("gh-ac", None).unwrap();
+    let gh = Gh::new(&config.gh_hostname.as_deref());
 
     match cli.subcommand() {
         Some(("commit", args)) => {
@@ -161,90 +161,16 @@ fn main() {
 
             gh.check_for_new_workflow_run_by_id(&initial_workflow_run)
         }
-        _ => {
-            unreachable!("Exhausted list of subcommands and subcommand_required prevents `None`")
-        }
-    }
-}
-
-fn old() {
-    let cli = Cli::parse();
-    let config: ConfigArgs = confy::load("gh-ac", None).unwrap();
-    let gh = Gh::new(&config.hostname.as_deref());
-
-    match &cli.commands {
-        Commands::Commit(args) => {
-            let selected_workflow_name = {
-                if args.workflow_name.is_none() {
-                    gh.select_workflow_name()
-                } else {
-                    args.workflow_name.clone().unwrap()
-                }
-            };
-            let initial_workflow_run = gh.get_workflow_run_by_name(&selected_workflow_name);
-
-            if args.all {
-                match git::add_all() {
-                    Some(e) => panic!("{}", e),
-                    None => {}
-                };
-            }
-
-            if !git::check_staged_files() {
-                println!("no staged files, exiting");
-                return;
-            }
-
-            let commit_msg = git::commit(&None).unwrap();
-
-            if commit_msg.is_none() {
-                println!("no commit message was entered, exiting");
-                return;
-            }
-            println!("commiting successful: {}", commit_msg.unwrap());
-
-            git::push(false).unwrap();
-
-            gh.check_for_new_workflow_run_by_id(&initial_workflow_run.unwrap());
-        }
-        Commands::Force(args) => {
-            let selected_workflow_name = {
-                if args.workflow_name.is_none() {
-                    gh.select_workflow_name()
-                } else {
-                    args.workflow_name.clone().unwrap()
-                }
-            };
-
-            if git::check_staged_files()
-                && !Confirm::new()
-                    .with_prompt("There are staged changes. Are you sure you want to force push?")
-                    .default(false)
-                    .interact()
-                    .unwrap()
-            {
-                {
-                    println!("Ok, aborting");
-                    return;
-                }
-            }
-
-            let initial_workflow_run = gh
-                .get_workflow_run_by_name(&selected_workflow_name)
-                .unwrap();
-
-            git::commit_amend_no_edit().unwrap();
-            git::push(true).unwrap();
-
-            gh.check_for_new_workflow_run_by_id(&initial_workflow_run)
-        }
-        Commands::Config(manage_config) => {
-            // hostname is a required field, so we can unwrap it here
+        Some(("config", args)) => {
+            let arg_hostname = args.get_one::<String>("hostname");
             let config = ConfigArgs {
-                hostname: manage_config.hostname.clone(),
+                hostname: arg_hostname.cloned(),
             };
             confy::store("gh-ac", None, config).unwrap();
             println!("config saved");
+        }
+        _ => {
+            unreachable!("Exhausted list of subcommands and subcommand_required prevents `None`")
         }
     }
 }
