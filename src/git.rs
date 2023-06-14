@@ -52,6 +52,9 @@ pub fn push(force: bool) -> Result<()> {
     // debug!("git push stderr: {}", &stderr);
     println!("{}", stdout);
     println!("{}", stderr);
+    if !stderr.is_empty() {
+        return Err(anyhow!("Error pushing changes: {}", stderr));
+    }
     return Ok(());
 }
 
