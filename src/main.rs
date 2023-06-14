@@ -3,8 +3,9 @@ mod git;
 use crate::gh::Gh;
 use clap::{arg, command, ArgMatches, Args, Command, Parser};
 use clap::{ArgAction, Subcommand};
-use cli_log::*; // also import logging macros
 use dialoguer::Confirm;
+use env_logger::Env;
+use log::{debug, error, info};
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
@@ -64,7 +65,8 @@ struct Config {
 }
 
 fn main() {
-    init_cli_log!();
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+
     let cli: ArgMatches = command!()
         .subcommand(
             Command::new("commit")
@@ -94,7 +96,7 @@ fn main() {
     match cli.subcommand() {
         Some(("commit", args)) => {
             if !git::check_staged_files() {
-                println!("no staged files, exiting");
+                info!("no staged files, exiting");
                 return;
             }
 
@@ -108,6 +110,8 @@ fn main() {
                     arg_workflow_name.clone().unwrap().to_string()
                 }
             };
+            debug!("user selected workflow name: {}", selected_workflow_name);
+
             let initial_workflow_run = gh.get_workflow_run_by_name(&selected_workflow_name);
 
             if *arg_commit_all.unwrap_or(&false) {
@@ -120,10 +124,10 @@ fn main() {
             let commit_msg = git::commit(&None).unwrap();
 
             if commit_msg.is_none() {
-                println!("no commit message was entered, exiting");
+                info!("no commit message was entered, exiting");
                 return;
             }
-            println!("commiting successful: {}", commit_msg.unwrap());
+            info!("commiting successful: {}", commit_msg.unwrap());
 
             git::push(false).unwrap();
 
@@ -147,7 +151,7 @@ fn main() {
                     .unwrap()
             {
                 {
-                    println!("Ok, aborting");
+                    info!("Ok, aborting");
                     return;
                 }
             }
@@ -167,10 +171,10 @@ fn main() {
                 hostname: arg_hostname.cloned(),
             };
             confy::store("gh-ac", None, config).unwrap();
-            println!("config saved");
+            info!("config saved");
         }
         _ => {
-            unreachable!("Exhausted list of subcommands and subcommand_required prevents `None`")
+            error!("no subcommand provided, exiting");
         }
     }
 }

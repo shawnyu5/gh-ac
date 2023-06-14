@@ -51,7 +51,10 @@ impl Gh<'_> {
         } else {
             self.should_use_custom_hostname = true
         }
-        dbg!(&self.should_use_custom_hostname);
+        debug!(
+            "Using custom hostname: {}",
+            &self.should_use_custom_hostname
+        );
     }
     /// construct arguments for `gh api`, including the optional `--hostname` if applicable
     /// * `args`: the args to pass to `gh api <args>`
