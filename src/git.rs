@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use dialoguer::Editor;
 use log::{debug, info};
+use std::borrow::Cow;
 use std::io::Error;
 use std::ops::Deref;
 use std::process::Command;
@@ -35,7 +36,7 @@ pub fn commit<'a>(message: &Option<String>) -> Result<Option<String>> {
 }
 
 /// git push
-pub fn push(force: bool) -> Result<()> {
+pub fn push<'a>(force: bool) -> Result<String> {
     let args = {
         if force {
             vec!["push", "--force"]
@@ -48,14 +49,14 @@ pub fn push(force: bool) -> Result<()> {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
     info!("pushed to remote");
-    // debug!("git push stdout: {}", &stdout);
-    // debug!("git push stderr: {}", &stderr);
-    println!("{}", stdout);
-    println!("{}", stderr);
+    debug!("git push stdout: {}", &stdout);
+    debug!("git push stderr: {}", &stderr);
+    // println!("{}", stdout);
+    // println!("{}", stderr);
     if !stderr.is_empty() {
         return Err(anyhow!("Error pushing changes: {}", stderr));
     }
-    return Ok(());
+    return Ok(format!("{}", stdout));
 }
 
 /// check if there are any staged files

@@ -172,7 +172,10 @@ fn main() {
                 .unwrap();
 
             git::commit_amend_no_edit().unwrap();
-            git::push(true).unwrap();
+            match git::push(true) {
+                Ok(_) => {}
+                Err(_) => {}
+            }
 
             gh.check_for_new_workflow_run_by_id(&initial_workflow_run)
         }
