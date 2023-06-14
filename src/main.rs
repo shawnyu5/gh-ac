@@ -95,6 +95,8 @@ fn main() {
         env_logger::Builder::from_env(Env::default().default_filter_or("warn,debug")).init();
     } else if verbose_count > &(2 as u8) {
         env_logger::Builder::from_env(Env::default().default_filter_or("warn,debug,trace")).init();
+    } else {
+        env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
     }
 
     // CLI config values
