@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use dialoguer::Editor;
-use log::debug;
+use log::{debug, info};
 use std::io::Error;
 use std::ops::Deref;
 use std::process::Command;
@@ -45,6 +45,8 @@ pub fn push(force: bool) -> Result<()> {
     };
     let output = Command::new("git").args(args).output()?;
     let stdout = String::from_utf8_lossy(&output.stdout);
+    info!("pushed to remote");
+    debug!("git push output: {}", &stdout);
     println!("{}", stdout);
     return Ok(());
 }
