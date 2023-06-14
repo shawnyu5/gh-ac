@@ -141,14 +141,8 @@ fn main() {
             }
             info!("commiting successful: {}", commit_msg.unwrap());
 
-            match git::push(false) {
-                Ok(e) => {
-                    info!("push successful: {}", e);
-                }
-                Err(e) => {
-                    error!("push failed: {}", e);
-                }
-            }
+            git::push(false).expect("failed to push");
+
             gh.check_for_new_workflow_run_by_id(&initial_workflow_run.unwrap());
         }
         Some(("force", args)) => {
@@ -179,14 +173,7 @@ fn main() {
                 .unwrap();
 
             git::commit_amend_no_edit().unwrap();
-            match git::push(true) {
-                Ok(e) => {
-                    info!("push successful: {}", e);
-                }
-                Err(e) => {
-                    error!("push failed: {}", e);
-                }
-            }
+            git::push(true).expect("failed to push");
 
             gh.check_for_new_workflow_run_by_id(&initial_workflow_run)
         }

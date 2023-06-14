@@ -36,7 +36,7 @@ pub fn commit<'a>(message: &Option<String>) -> Result<Option<String>> {
 }
 
 /// git push
-pub fn push<'a>(force: bool) -> Result<String> {
+pub fn push<'a>(force: bool) -> Result<()> {
     let args = {
         if force {
             vec!["push", "--force"]
@@ -44,18 +44,15 @@ pub fn push<'a>(force: bool) -> Result<String> {
             vec!["push"]
         }
     };
-    debug!("output: {}", args.join(" "));
+    debug!("git push args: {}", args.join(" "));
     let output = Command::new("git").args(args).output()?;
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
-    debug!("git push stdout: {}", &stdout);
-    debug!("git push stderr: {}", &stderr);
-    // println!("{}", stdout);
-    // println!("{}", stderr);
-    if !stderr.is_empty() {
-        return Err(anyhow!("Error pushing changes: {}", stderr));
-    }
-    return Ok(format!("{}", stdout));
+    // debug!("git push stdout: {}", &stdout);
+    // debug!("git push stderr: {}", &stderr);
+    println!("{}", stdout);
+    println!("{}", stderr);
+    return Ok(());
 }
 
 /// check if there are any staged files
