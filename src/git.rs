@@ -1,5 +1,7 @@
 use anyhow::{anyhow, Result};
 use dialoguer::Editor;
+use log::{debug, info};
+use std::borrow::Cow;
 use std::io::Error;
 use std::ops::Deref;
 use std::process::Command;
@@ -34,7 +36,7 @@ pub fn commit<'a>(message: &Option<String>) -> Result<Option<String>> {
 }
 
 /// git push
-pub fn push(force: bool) -> Result<()> {
+pub fn push<'a>(force: bool) -> Result<String> {
     let args = {
         if force {
             vec!["push", "--force"]
@@ -42,10 +44,19 @@ pub fn push(force: bool) -> Result<()> {
             vec!["push"]
         }
     };
+    debug!("output: {}", args.join(" "));
     let output = Command::new("git").args(args).output()?;
     let stdout = String::from_utf8_lossy(&output.stdout);
-    println!("{}", stdout);
-    return Ok(());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    info!("pushed to remote");
+    debug!("git push stdout: {}", &stdout);
+    debug!("git push stderr: {}", &stderr);
+    // println!("{}", stdout);
+    // println!("{}", stderr);
+    if !stderr.is_empty() {
+        return Err(anyhow!("Error pushing changes: {}", stderr));
+    }
+    return Ok(format!("{}", stdout));
 }
 
 /// check if there are any staged files
@@ -73,6 +84,7 @@ pub fn check_staged_files() -> bool {
 /// returns Some(error) if there was an error. None otherwise
 pub fn add_all() -> Option<Error> {
     let err = Command::new("git").arg("add").arg("-A").spawn().err();
+    debug!("adding all git changes");
     return err;
 }
 
