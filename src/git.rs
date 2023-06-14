@@ -43,6 +43,7 @@ pub fn push(force: bool) -> Result<()> {
             vec!["push"]
         }
     };
+    debug!("output: {}", args.join(" "));
     let output = Command::new("git").args(args).output()?;
     let stdout = String::from_utf8_lossy(&output.stdout);
     info!("pushed to remote");
