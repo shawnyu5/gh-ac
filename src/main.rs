@@ -66,7 +66,11 @@ struct Config {
 
 fn main() {
     let cli: ArgMatches = command!()
-        .arg(arg!(-v --verbose "increase verbosity").action(ArgAction::Count))
+        .arg(
+            arg!(-v --verbose "increase verbosity")
+                .action(ArgAction::Count)
+                .global(true),
+        )
         .subcommand(
             Command::new("commit")
                 .about("commit the current")
@@ -105,13 +109,20 @@ fn main() {
 
     match cli.subcommand() {
         Some(("commit", args)) => {
+            let arg_workflow_name = args.get_one::<String>("workflow");
+            let arg_commit_all = args.get_one::<bool>("all");
+
+            if *arg_commit_all.unwrap_or(&false) {
+                match git::add_all() {
+                    Some(e) => panic!("{}", e),
+                    None => {}
+                };
+            }
+
             if !git::check_staged_files() {
                 info!("no staged files, exiting");
                 return;
             }
-
-            let arg_workflow_name = args.get_one::<String>("workflow");
-            let arg_commit_all = args.get_one::<bool>("all");
 
             let selected_workflow_name = {
                 if arg_workflow_name.is_none() {
@@ -123,13 +134,6 @@ fn main() {
             debug!("user selected workflow name: {}", selected_workflow_name);
 
             let initial_workflow_run = gh.get_workflow_run_by_name(&selected_workflow_name);
-
-            if *arg_commit_all.unwrap_or(&false) {
-                match git::add_all() {
-                    Some(e) => panic!("{}", e),
-                    None => {}
-                };
-            }
 
             let commit_msg = git::commit(&None).unwrap();
 

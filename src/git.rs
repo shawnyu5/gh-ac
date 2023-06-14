@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use dialoguer::Editor;
+use log::debug;
 use std::io::Error;
 use std::ops::Deref;
 use std::process::Command;
@@ -73,6 +74,7 @@ pub fn check_staged_files() -> bool {
 /// returns Some(error) if there was an error. None otherwise
 pub fn add_all() -> Option<Error> {
     let err = Command::new("git").arg("add").arg("-A").spawn().err();
+    debug!("adding all git changes");
     return err;
 }
 
