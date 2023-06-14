@@ -48,7 +48,6 @@ pub fn push<'a>(force: bool) -> Result<String> {
     let output = Command::new("git").args(args).output()?;
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
-    info!("pushed to remote");
     debug!("git push stdout: {}", &stdout);
     debug!("git push stderr: {}", &stderr);
     // println!("{}", stdout);
