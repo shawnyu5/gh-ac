@@ -141,7 +141,7 @@ fn main() {
             }
             info!("commiting successful: {}", commit_msg.unwrap());
 
-            match git::push(true) {
+            match git::push(false) {
                 Ok(e) => {
                     info!("push successful: {}", e);
                 }
