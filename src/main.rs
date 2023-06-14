@@ -116,10 +116,8 @@ fn main() {
                 match git::add_all() {
                     Some(e) => panic!("{}", e),
                     None => {}
-                };
-            }
-
-            if !git::check_staged_files() {
+                }
+            } else if !git::check_staged_files() {
                 info!("no staged files, exiting");
                 return;
             }
@@ -144,7 +142,6 @@ fn main() {
             info!("commiting successful: {}", commit_msg.unwrap());
 
             git::push(false).unwrap();
-
             gh.check_for_new_workflow_run_by_id(&initial_workflow_run.unwrap());
         }
         Some(("force", args)) => {
