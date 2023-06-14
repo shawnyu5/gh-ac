@@ -7,3 +7,4 @@
 - `gh ac <commit|force> -w <WORKFLOW_NAME>` - specify the workflow name to search for. This is not case sensitive.
   - if there are currently staged changes, warn user before proceeding
 - `gh ac config --hostname` to get a custom hostname (for Github enterprise)
+- `gh ac <command> -v` - configure logging level. More time the flag is specified, the more granular the logging

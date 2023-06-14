@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use dialoguer::{console::Term, theme::ColorfulTheme, FuzzySelect};
-use log::debug;
+use log::{debug, info, trace};
 use serde_derive::{Deserialize, Serialize};
 use std::{
     fmt::Display,
@@ -45,7 +45,8 @@ impl Gh<'_> {
         // let args = self.construct_gh_api_args(&mut vec!["/repos/{owner}/{repo}/actions/runs"]);
         let args = vec!["api", "/repos/{owner}/{repo}/actions/runs"];
         let cmd = Command::new("gh").args(args).output().unwrap();
-        // dbg!(&cmd);
+        trace!("gh api /repos/{{owner}}/{{repo}}/actions/runs: {:?}", cmd);
+
         if cmd.status.success() {
             self.should_use_custom_hostname = false
         } else {
@@ -64,6 +65,7 @@ impl Gh<'_> {
         if self.should_use_custom_hostname {
             match self.hostname {
                 Some(hostname) => {
+                    debug!("appending custom hostname to gh command");
                     let mut gh_args = vec!["api", "--hostname", hostname];
                     gh_args.append(args);
                     return gh_args;
@@ -91,6 +93,10 @@ impl Gh<'_> {
             .args(&args)
             .output()
             .expect("to get workflow runs from `gh`");
+        trace!(
+            "gh api /repos/{{owner}}/{{repo}}/actions/runs: {:?}",
+            output
+        );
 
         if output.status.success() {
             let stdout = String::from_utf8_lossy(&output.stdout);
@@ -117,7 +123,11 @@ impl Gh<'_> {
     pub fn repo_workflows(&self) -> Result<Workflows> {
         let args = self.construct_gh_api_args(&mut vec!["/repos/{owner}/{repo}/actions/workflows"]);
 
-        debug!("hello");
+        trace!(
+            "gh api /repos/{{owner}}/{{repo}}/actions/workflows: {:?}",
+            args
+        );
+
         let output = Command::new("gh")
             .args(&args)
             .output()
@@ -136,7 +146,7 @@ impl Gh<'_> {
     ///
     /// * `old_workflow_run`: the last workflow run we are looking in the repo
     pub fn check_for_new_workflow_run_by_id(&self, old_workflow_run: &WorkflowRun) {
-        println!("waiting for 5 seconds");
+        info!("waiting for 5 seconds");
         std::thread::sleep(std::time::Duration::from_secs(5));
         loop {
             let current_workflow_run = self
@@ -144,8 +154,8 @@ impl Gh<'_> {
                 .unwrap_or_default();
 
             if old_workflow_run == &current_workflow_run {
-                println!("no workflow run has started...");
-                println!("waiting for 5 seconds");
+                info!("no workflow run has started...");
+                info!("waiting for 5 seconds");
                 std::thread::sleep(std::time::Duration::from_secs(5));
                 continue;
             }

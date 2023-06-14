@@ -65,9 +65,8 @@ struct Config {
 }
 
 fn main() {
-    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
-
     let cli: ArgMatches = command!()
+        .arg(arg!(-v --verbose "increase verbosity").action(ArgAction::Count))
         .subcommand(
             Command::new("commit")
                 .about("commit the current")
@@ -88,6 +87,15 @@ fn main() {
                 ),
         )
         .get_matches();
+
+    let verbose_count = &cli.get_count("verbose");
+    if verbose_count == &(1 as u8) {
+        env_logger::Builder::from_env(Env::default().default_filter_or("warn")).init();
+    } else if verbose_count == &(2 as u8) {
+        env_logger::Builder::from_env(Env::default().default_filter_or("warn,debug")).init();
+    } else if verbose_count > &(2 as u8) {
+        env_logger::Builder::from_env(Env::default().default_filter_or("warn,debug,trace")).init();
+    }
 
     // CLI config values
     let config: Config = confy::load("gh-ac", None).unwrap();
