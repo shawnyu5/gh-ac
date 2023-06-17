@@ -151,8 +151,8 @@ impl Gh<'_> {
     ///
     /// * `old_workflow_run`: the last workflow run we are looking in the repo
     pub fn check_for_new_workflow_run_by_id(&self, old_workflow_run: &WorkflowRun) {
-        info!("waiting for 5 seconds");
-        std::thread::sleep(std::time::Duration::from_secs(5));
+        info!("waiting for 3 seconds");
+        std::thread::sleep(std::time::Duration::from_secs(3));
         loop {
             let current_workflow_run = self
                 .get_workflow_run_by_name(&old_workflow_run.name)
@@ -160,8 +160,8 @@ impl Gh<'_> {
 
             if old_workflow_run == &current_workflow_run {
                 info!("no workflow run has started...");
-                info!("waiting for 5 seconds");
-                std::thread::sleep(std::time::Duration::from_secs(5));
+                info!("waiting for 3 seconds");
+                std::thread::sleep(std::time::Duration::from_secs(3));
                 continue;
             }
             println!("{}", current_workflow_run.html_url);
