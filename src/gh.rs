@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use dialoguer::{console::Term, theme::ColorfulTheme, FuzzySelect};
-use log::{debug, info, trace};
+use log::{debug, error, info, trace};
 use serde_derive::{Deserialize, Serialize};
 use std::{
     fmt::Display,
@@ -118,8 +118,7 @@ impl Gh<'_> {
 
     /// get all workflows of a repo
     ///
-    /// `use_custom_hostname`: whether or not to use the custom hostname from the config file
-    /// returns all workflows of a repo
+    /// returns all active workflows of a repo
     pub fn repo_workflows(&self) -> Result<Workflows> {
         let args = self.construct_gh_api_args(&mut vec!["/repos/{owner}/{repo}/actions/workflows"]);
 
@@ -135,7 +134,13 @@ impl Gh<'_> {
 
         if output.status.success() {
             let stdout = String::from_utf8_lossy(&output.stdout);
-            return Ok(serde_json::from_str::<Workflows>(&stdout)?);
+            let mut workflows = serde_json::from_str::<Workflows>(&stdout)?;
+            workflows.workflows = workflows
+                .workflows
+                .into_iter()
+                .filter(|e| e.state == "active")
+                .collect();
+            return Ok(workflows);
         } else {
             let stderr = String::from_utf8_lossy(&output.stderr);
             return Err(anyhow!("failed getting repo workflows...: {}", stderr));
@@ -146,8 +151,8 @@ impl Gh<'_> {
     ///
     /// * `old_workflow_run`: the last workflow run we are looking in the repo
     pub fn check_for_new_workflow_run_by_id(&self, old_workflow_run: &WorkflowRun) {
-        info!("waiting for 5 seconds");
-        std::thread::sleep(std::time::Duration::from_secs(5));
+        info!("waiting for 3 seconds");
+        std::thread::sleep(std::time::Duration::from_secs(3));
         loop {
             let current_workflow_run = self
                 .get_workflow_run_by_name(&old_workflow_run.name)
@@ -155,8 +160,8 @@ impl Gh<'_> {
 
             if old_workflow_run == &current_workflow_run {
                 info!("no workflow run has started...");
-                info!("waiting for 5 seconds");
-                std::thread::sleep(std::time::Duration::from_secs(5));
+                info!("waiting for 3 seconds");
+                std::thread::sleep(std::time::Duration::from_secs(3));
                 continue;
             }
             println!("{}", current_workflow_run.html_url);
@@ -169,9 +174,10 @@ impl Gh<'_> {
     /// returns the user selected workflow id
     pub fn select_workflow_name(&self) -> String {
         let workflows = self.repo_workflows().unwrap_or_default();
+        trace!("workflows: {:?}", workflows);
 
-        // if there are more than one workflow in the repo, ask the user which one they would like
-        if &workflows.total_count > &1 {
+        // compare workflows.len() instead of `workflows.total_count` cuz we are filtering inactive workflows in `repo_workflows()`
+        if &workflows.workflows.len() > &1 {
             let selection_index = FuzzySelect::with_theme(&ColorfulTheme::default())
                 .items(&workflows.workflows)
                 .default(0)
@@ -180,10 +186,10 @@ impl Gh<'_> {
                 .unwrap();
 
             workflows.workflows[selection_index].name.clone()
-        } else if &workflows.total_count == &1 {
+        } else if &workflows.workflows.len() == &1 {
             workflows.workflows[0].name.clone()
         } else {
-            println!("no workflows found in repo, exiting");
+            error!("no workflows found in repo, exiting");
             process::exit(0);
         }
     }

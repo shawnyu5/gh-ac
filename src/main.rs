@@ -66,7 +66,11 @@ struct Config {
 
 fn main() {
     let cli: ArgMatches = command!()
-        .arg(arg!(-v --verbose "increase verbosity").action(ArgAction::Count))
+        .arg(
+            arg!(-v --verbose "increase verbosity")
+                .action(ArgAction::Count)
+                .global(true),
+        )
         .subcommand(
             Command::new("commit")
                 .about("commit the current")
@@ -105,13 +109,18 @@ fn main() {
 
     match cli.subcommand() {
         Some(("commit", args)) => {
-            if !git::check_staged_files() {
+            let arg_workflow_name = args.get_one::<String>("workflow");
+            let arg_commit_all = args.get_one::<bool>("all");
+
+            if *arg_commit_all.unwrap_or(&false) {
+                match git::add_all() {
+                    Some(e) => panic!("{}", e),
+                    None => {}
+                }
+            } else if !git::check_staged_files() {
                 info!("no staged files, exiting");
                 return;
             }
-
-            let arg_workflow_name = args.get_one::<String>("workflow");
-            let arg_commit_all = args.get_one::<bool>("all");
 
             let selected_workflow_name = {
                 if arg_workflow_name.is_none() {
@@ -124,13 +133,6 @@ fn main() {
 
             let initial_workflow_run = gh.get_workflow_run_by_name(&selected_workflow_name);
 
-            if *arg_commit_all.unwrap_or(&false) {
-                match git::add_all() {
-                    Some(e) => panic!("{}", e),
-                    None => {}
-                };
-            }
-
             let commit_msg = git::commit(&None).unwrap();
 
             if commit_msg.is_none() {
@@ -139,7 +141,7 @@ fn main() {
             }
             info!("commiting successful: {}", commit_msg.unwrap());
 
-            git::push(false).unwrap();
+            git::push(false).expect("failed to push");
 
             gh.check_for_new_workflow_run_by_id(&initial_workflow_run.unwrap());
         }
@@ -171,7 +173,7 @@ fn main() {
                 .unwrap();
 
             git::commit_amend_no_edit().unwrap();
-            git::push(true).unwrap();
+            git::push(true).expect("failed to push");
 
             gh.check_for_new_workflow_run_by_id(&initial_workflow_run)
         }
