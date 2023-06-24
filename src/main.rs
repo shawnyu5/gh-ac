@@ -8,7 +8,7 @@ use clap::{arg, command, ArgMatches, Command};
 use dialoguer::Confirm;
 use env_logger::Env;
 use git::check_unpushed_changes;
-use log::{debug, error, info};
+use log::{error, info};
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
@@ -24,12 +24,6 @@ fn main() {
             arg!(-v --verbose "increase verbosity")
                 .action(ArgAction::Count)
                 .global(true),
-        )
-        .subcommand(
-            Command::new("commit")
-                .about("commit the current")
-                .arg(arg!(-w --workflow <WORKFLOW_NAME> "name of the workflow to return"))
-                .arg(arg!(-a --all "add all unstaged changes before commiting")),
         )
         .subcommand(
             Command::new("push")
@@ -67,43 +61,6 @@ fn main() {
     let gh = Gh::new(&config.hostname.as_deref());
 
     match cli.subcommand() {
-        Some(("commit", args)) => {
-            let arg_workflow_name = args.get_one::<String>("workflow");
-            let arg_commit_all = args.get_one::<bool>("all");
-
-            if *arg_commit_all.unwrap_or(&false) {
-                match git::add_all() {
-                    Some(e) => panic!("{}", e),
-                    None => {}
-                }
-            } else if !git::check_staged_files() {
-                info!("no staged files, exiting");
-                return;
-            }
-
-            let selected_workflow_name = {
-                if arg_workflow_name.is_none() {
-                    gh.select_workflow_name()
-                } else {
-                    arg_workflow_name.clone().unwrap().to_string()
-                }
-            };
-            debug!("user selected workflow name: {}", selected_workflow_name);
-
-            let initial_workflow_run = gh.get_workflow_run_by_name(&selected_workflow_name);
-
-            let commit_msg = git::commit(&None).unwrap();
-
-            if commit_msg.is_none() {
-                info!("no commit message was entered, exiting");
-                return;
-            }
-            info!("commiting successful: {}", commit_msg.unwrap());
-
-            git::push(false).expect("failed to push");
-
-            gh.check_for_new_workflow_run_by_id(&initial_workflow_run.unwrap());
-        }
         Some(("push", args)) => {
             let arg_workflow_name = args.get_one::<String>("workflow");
             match check_unpushed_changes() {
