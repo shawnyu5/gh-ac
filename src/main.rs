@@ -1,62 +1,16 @@
 mod gh;
 mod git;
+use std::process;
+
 use crate::gh::Gh;
-use clap::{arg, command, ArgMatches, Args, Command, Parser};
-use clap::{ArgAction, Subcommand};
+use clap::ArgAction;
+use clap::{arg, command, ArgMatches, Command};
 use dialoguer::Confirm;
 use env_logger::Env;
+use git::check_unpushed_changes;
 use log::{debug, error, info};
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
-
-#[derive(Parser)]
-// TODO: fill these out in Cargo.toml and read them from there
-#[command(name = "gh-ac")]
-#[command(author = "Shawn Yu")]
-#[command(version = "1.0.0")]
-#[command(about = "Fire off gh actions")]
-struct Cli {
-    #[command(subcommand)]
-    commands: Commands,
-    // #[command(flatten)]
-    // verbose: Verbosity<InfoLevel>,
-}
-
-#[derive(Subcommand)]
-enum Commands {
-    /// commit the current changes
-    Commit(CommitArgs),
-    /// force push to trigger a new workflow run
-    Force(ForceArgs),
-    /// set configuration values
-    Config(ConfigArgs),
-}
-
-#[derive(Args)]
-struct CommitArgs {
-    /// add all unstaged changes before commiting
-    #[arg(long, short, action = ArgAction::SetTrue)]
-    all: bool,
-    /// the workflow name to search for. NOTE this is NOT case sensitive
-    #[arg(long, short)]
-    workflow_name: Option<String>,
-    // /// git commit message
-    // #[arg(long, short)]
-    // message: Vec<String>,
-}
-
-#[derive(Args)]
-struct ForceArgs {
-    /// the workflow name to search for. NOTE this is NOT case sensitive
-    #[arg(long, short)]
-    workflow_name: Option<String>,
-}
-
-#[derive(Args, Serialize, Deserialize, Default)]
-struct ConfigArgs {
-    #[arg(long)]
-    hostname: Option<String>,
-}
 
 #[derive(Default, Debug, Serialize, Deserialize, Clone)]
 struct Config {
@@ -76,6 +30,11 @@ fn main() {
                 .about("commit the current")
                 .arg(arg!(-w --workflow <WORKFLOW_NAME> "name of the workflow to return"))
                 .arg(arg!(-a --all "add all unstaged changes before commiting")),
+        )
+        .subcommand(
+            Command::new("push")
+                .about("push all unpushed commits")
+                .arg(arg!(-w --workflow <WORKFLOW_NAME> "name of the workflow to return")),
         )
         .subcommand(
             Command::new("force")
@@ -145,6 +104,43 @@ fn main() {
 
             gh.check_for_new_workflow_run_by_id(&initial_workflow_run.unwrap());
         }
+        Some(("push", args)) => {
+            let arg_workflow_name = args.get_one::<String>("workflow");
+            match check_unpushed_changes() {
+                Ok(changed) => {
+                    if !changed {
+                        info!("No unpushed commits. Exiting");
+                        process::exit(0);
+                    }
+                }
+                Err(e) => {
+                    error!("Error checking unpushed changes: {}", e.to_string());
+                    process::exit(1);
+                }
+            }
+
+            let selected_workflow_name = {
+                if arg_workflow_name.is_none() {
+                    gh.select_workflow_name()
+                } else {
+                    arg_workflow_name.clone().unwrap().to_string()
+                }
+            };
+
+            let initial_workflow_run = gh
+                .get_workflow_run_by_name(&selected_workflow_name)
+                .unwrap();
+
+            match git::push(false) {
+                Ok(_) => {}
+                Err(e) => {
+                    error!("Failed to push changes: {}", e.to_string());
+                    process::exit(1);
+                }
+            }
+
+            gh.check_for_new_workflow_run_by_id(&initial_workflow_run)
+        }
         Some(("force", args)) => {
             let arg_workflow_name = args.get_one::<String>("workflow");
             let selected_workflow_name = {
@@ -179,7 +175,7 @@ fn main() {
         }
         Some(("config", args)) => {
             let arg_hostname = args.get_one::<String>("hostname");
-            let config = ConfigArgs {
+            let config = Config {
                 hostname: arg_hostname.cloned(),
             };
             confy::store("gh-ac", None, config).unwrap();
