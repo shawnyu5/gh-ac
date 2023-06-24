@@ -1,10 +1,13 @@
 mod gh;
 mod git;
+use std::process;
+
 use crate::gh::Gh;
 use clap::{arg, command, ArgMatches, Args, Command, Parser};
 use clap::{ArgAction, Subcommand};
 use dialoguer::Confirm;
 use env_logger::Env;
+use git::unpushed_changes;
 use log::{debug, error, info};
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
@@ -78,6 +81,11 @@ fn main() {
                 .arg(arg!(-a --all "add all unstaged changes before commiting")),
         )
         .subcommand(
+            Command::new("push")
+                .about("push all unpushed commits")
+                .arg(arg!(-w --workflow <WORKFLOW_NAME> "name of the workflow to return")),
+        )
+        .subcommand(
             Command::new("force")
                 .about("force push to trigger a new workflow run")
                 .arg(arg!(-w --workflow <WORKFLOW_NAME> "name of the workflow to return")),
@@ -144,6 +152,21 @@ fn main() {
             git::push(false).expect("failed to push");
 
             gh.check_for_new_workflow_run_by_id(&initial_workflow_run.unwrap());
+        }
+        Some(("push", args)) => {
+            let arg_workflow_name = args.get_one::<String>("workflow");
+            match unpushed_changes() {
+                Ok(changed) => {
+                    if !changed {
+                        info!("No unpushed commits. Exiting");
+                        process::exit(0);
+                    }
+                }
+                Err(e) => {
+                    error!("Error checking unpushed changes: {}", e.to_string());
+                    process::exit(1);
+                }
+            }
         }
         Some(("force", args)) => {
             let arg_workflow_name = args.get_one::<String>("workflow");
