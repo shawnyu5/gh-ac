@@ -3,57 +3,14 @@ mod git;
 use std::process;
 
 use crate::gh::Gh;
-use clap::{arg, command, ArgMatches, Args, Command, Parser};
-use clap::{ArgAction, Subcommand};
+use clap::ArgAction;
+use clap::{arg, command, ArgMatches, Args, Command};
 use dialoguer::Confirm;
 use env_logger::Env;
 use git::check_unpushed_changes;
 use log::{debug, error, info};
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
-
-#[derive(Parser)]
-// TODO: fill these out in Cargo.toml and read them from there
-#[command(name = "gh-ac")]
-#[command(author = "Shawn Yu")]
-#[command(version = "1.0.0")]
-#[command(about = "Fire off gh actions")]
-struct Cli {
-    #[command(subcommand)]
-    commands: Commands,
-    // #[command(flatten)]
-    // verbose: Verbosity<InfoLevel>,
-}
-
-#[derive(Subcommand)]
-enum Commands {
-    /// commit the current changes
-    Commit(CommitArgs),
-    /// force push to trigger a new workflow run
-    Force(ForceArgs),
-    /// set configuration values
-    Config(ConfigArgs),
-}
-
-#[derive(Args)]
-struct CommitArgs {
-    /// add all unstaged changes before commiting
-    #[arg(long, short, action = ArgAction::SetTrue)]
-    all: bool,
-    /// the workflow name to search for. NOTE this is NOT case sensitive
-    #[arg(long, short)]
-    workflow_name: Option<String>,
-    // /// git commit message
-    // #[arg(long, short)]
-    // message: Vec<String>,
-}
-
-#[derive(Args)]
-struct ForceArgs {
-    /// the workflow name to search for. NOTE this is NOT case sensitive
-    #[arg(long, short)]
-    workflow_name: Option<String>,
-}
 
 #[derive(Args, Serialize, Deserialize, Default)]
 struct ConfigArgs {
