@@ -7,7 +7,7 @@ use clap::{arg, command, ArgMatches, Args, Command, Parser};
 use clap::{ArgAction, Subcommand};
 use dialoguer::Confirm;
 use env_logger::Env;
-use git::unpushed_changes;
+use git::check_unpushed_changes;
 use log::{debug, error, info};
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
@@ -155,7 +155,7 @@ fn main() {
         }
         Some(("push", args)) => {
             let arg_workflow_name = args.get_one::<String>("workflow");
-            match unpushed_changes() {
+            match check_unpushed_changes() {
                 Ok(changed) => {
                     if !changed {
                         info!("No unpushed commits. Exiting");
@@ -167,6 +167,28 @@ fn main() {
                     process::exit(1);
                 }
             }
+
+            let selected_workflow_name = {
+                if arg_workflow_name.is_none() {
+                    gh.select_workflow_name()
+                } else {
+                    arg_workflow_name.clone().unwrap().to_string()
+                }
+            };
+
+            let initial_workflow_run = gh
+                .get_workflow_run_by_name(&selected_workflow_name)
+                .unwrap();
+
+            match git::push(false) {
+                Ok(_) => {}
+                Err(e) => {
+                    error!("Failed to push changes: {}", e.to_string());
+                    process::exit(1);
+                }
+            }
+
+            gh.check_for_new_workflow_run_by_id(&initial_workflow_run)
         }
         Some(("force", args)) => {
             let arg_workflow_name = args.get_one::<String>("workflow");

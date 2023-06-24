@@ -97,12 +97,12 @@ pub fn commit_amend_no_edit() -> Result<()> {
 }
 
 /// check if there are unpushed commits
-pub fn unpushed_changes() -> Result<bool> {
+pub fn check_unpushed_changes() -> Result<bool> {
     // Open the repository in the current directory
     let repo = match Repository::open(".") {
         Ok(repo) => repo,
         Err(e) => {
-            return Err(anyhow!("Unable to open repository"));
+            return Err(anyhow!("Unable to open repository: {}", e.to_string()));
         }
     };
 
@@ -132,7 +132,7 @@ pub fn unpushed_changes() -> Result<bool> {
 
     let upstream = match branch_obj.upstream() {
         Ok(upstream) => upstream,
-        Err(e) => {
+        Err(_) => {
             eprintln!("Branch '{}' has no upstream configured", branch);
             return Err(anyhow!("Branch '{}' has no upstream configured", branch));
         }
