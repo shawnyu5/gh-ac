@@ -8,7 +8,7 @@ use clap::{arg, command, ArgMatches, Command};
 use dialoguer::Confirm;
 use env_logger::Env;
 use git::check_unpushed_changes;
-use log::{debug, error, info};
+use log::{error, info};
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
