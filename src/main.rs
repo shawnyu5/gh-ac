@@ -4,19 +4,13 @@ use std::process;
 
 use crate::gh::Gh;
 use clap::ArgAction;
-use clap::{arg, command, ArgMatches, Args, Command};
+use clap::{arg, command, ArgMatches, Command};
 use dialoguer::Confirm;
 use env_logger::Env;
 use git::check_unpushed_changes;
 use log::{debug, error, info};
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
-
-#[derive(Args, Serialize, Deserialize, Default)]
-struct ConfigArgs {
-    #[arg(long)]
-    hostname: Option<String>,
-}
 
 #[derive(Default, Debug, Serialize, Deserialize, Clone)]
 struct Config {
@@ -181,7 +175,7 @@ fn main() {
         }
         Some(("config", args)) => {
             let arg_hostname = args.get_one::<String>("hostname");
-            let config = ConfigArgs {
+            let config = Config {
                 hostname: arg_hostname.cloned(),
             };
             confy::store("gh-ac", None, config).unwrap();
