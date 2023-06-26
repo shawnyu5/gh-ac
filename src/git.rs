@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use git2::Repository;
 use log::debug;
-use std::process::Command;
+use std::{env::set_current_dir, path::Path, process::Command};
 
 /// git push
 pub fn push<'a>(force: bool) -> Result<()> {
@@ -57,6 +57,9 @@ pub fn commit_amend_no_edit() -> Result<()> {
 
 /// check if there are unpushed commits
 pub fn check_unpushed_changes() -> Result<bool> {
+    let root = root_dir().unwrap();
+    let root = Path::new(&root);
+    set_current_dir(root).unwrap();
     // Open the repository in the current directory
     let repo = match Repository::open(".") {
         Ok(repo) => repo,
@@ -112,5 +115,18 @@ pub fn check_unpushed_changes() -> Result<bool> {
         return Ok(true);
     } else {
         return Ok(false);
+    }
+}
+
+/// get the git root directory
+pub fn root_dir() -> Result<String> {
+    // git rev-parse --show-toplevel
+    match Command::new("git")
+        .arg("rev-parse")
+        .arg("--show-toplevel")
+        .output()
+    {
+        Ok(output) => Ok(String::from_utf8_lossy(&output.stdout).into()),
+        Err(_) => Err(anyhow!("Unable to get git root directory")),
     }
 }
