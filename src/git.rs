@@ -59,7 +59,9 @@ pub fn commit_amend_no_edit() -> Result<()> {
 pub fn check_unpushed_changes() -> Result<bool> {
     let root = root_dir().unwrap();
     let root = Path::new(&root);
+    debug!("root: {}", root.display());
     set_current_dir(root).unwrap();
+
     // Open the repository in the current directory
     let repo = match Repository::open(".") {
         Ok(repo) => repo,
