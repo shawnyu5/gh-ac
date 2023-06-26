@@ -106,7 +106,7 @@ fn main() {
                 if arg_workflow_name.is_none() {
                     gh.select_workflow_name()
                 } else {
-                    arg_workflow_name.clone().unwrap().to_string()
+                    arg_workflow_name.clone().unwrap().trim().to_string()
                 }
             };
 
