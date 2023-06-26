@@ -141,6 +141,9 @@ impl Gh<'_> {
                 .into_iter()
                 .filter(|e| e.state == "active")
                 .collect();
+
+            // update total count after filtering
+            workflows.total_count = workflows.workflows.len();
             return Ok(workflows);
         } else {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -191,8 +194,7 @@ impl Gh<'_> {
         let workflows = self.repo_workflows().unwrap_or_default();
         trace!("workflows: {:?}", workflows);
 
-        // compare workflows.len() instead of `workflows.total_count` cuz we are filtering inactive workflows in `repo_workflows()`
-        if &workflows.workflows.len() > &1 {
+        if &workflows.total_count > &1 {
             let selection_index = FuzzySelect::with_theme(&ColorfulTheme::default())
                 .items(&workflows.workflows)
                 .default(0)
