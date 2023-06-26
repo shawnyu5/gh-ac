@@ -1,6 +1,6 @@
 mod gh;
 mod git;
-use std::process;
+use std::{env, process};
 
 use crate::gh::Gh;
 use clap::ArgAction;

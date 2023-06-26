@@ -3,6 +3,7 @@ use dialoguer::{console::Term, theme::ColorfulTheme, FuzzySelect};
 use log::{debug, error, info, trace};
 use serde_derive::{Deserialize, Serialize};
 use std::{
+    env,
     fmt::Display,
     process::{self, Command},
 };
@@ -149,7 +150,7 @@ impl Gh<'_> {
 
     /// check for a new workflow run with an id new workflow runs
     ///
-    /// * `old_workflow_run`: the last workflow run we are looking in the repo
+    /// * `old_workflow_run`: the last workflow run that was observed in the repo
     pub fn check_for_new_workflow_run_by_id(&self, old_workflow_run: &WorkflowRun) {
         info!("waiting for 3 seconds");
         std::thread::sleep(std::time::Duration::from_secs(3));
@@ -164,7 +165,21 @@ impl Gh<'_> {
                 std::thread::sleep(std::time::Duration::from_secs(3));
                 continue;
             }
-            println!("{}", current_workflow_run.html_url);
+            println!("{}", &current_workflow_run.html_url);
+
+            match Command::new(get_browser())
+                .arg(&current_workflow_run.html_url)
+                .output()
+            {
+                Ok(_) => {}
+                Err(_) => {
+                    error!(
+                        "failed to open browser. Please open the following url in your browser: {}",
+                        &current_workflow_run.html_url
+                    )
+                }
+            };
+
             break;
         }
     }
@@ -195,6 +210,10 @@ impl Gh<'_> {
     }
 }
 
+/// get the default browser
+fn get_browser() -> String {
+    return env::var("BROWSER").unwrap_or_else(|_| "open".to_string());
+}
 /// workflow runs of a repo from gh api
 #[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorkflowRuns {
