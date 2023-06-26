@@ -28,12 +28,17 @@ fn build_cli() -> Command {
         .subcommand(
             Command::new("push")
                 .about("push all unpushed commits")
-                .arg(arg!(-w --workflow <WORKFLOW_NAME> "name of the workflow to return")),
+                .arg(arg!(-w --workflow <WORKFLOW_NAME> "name of the workflow to return"))
+                .arg(arg!(--url "print out the workflow url instead of opening it in browser")),
         )
         .subcommand(
             Command::new("force")
                 .about("force push to trigger a new workflow run")
-                .arg(arg!(-w --workflow <WORKFLOW_NAME> "name of the workflow to return")),
+                .arg(arg!(-w --workflow <WORKFLOW_NAME> "name of the workflow to return"))
+                .arg(
+                    arg!(--url "print out the workflow url instead of opening it in browser")
+                        .action(ArgAction::SetTrue),
+                ),
         )
         .subcommand(
             Command::new("config")
@@ -65,6 +70,8 @@ fn main() {
     match cli.subcommand() {
         Some(("push", args)) => {
             let arg_workflow_name = args.get_one::<String>("workflow");
+            let arg_print_url = args.get_one::<bool>("url").unwrap_or_else(|| &false);
+
             match check_unpushed_changes() {
                 Ok(changed) => {
                     if !changed {
@@ -98,10 +105,12 @@ fn main() {
                 }
             }
 
-            gh.check_for_new_workflow_run_by_id(&initial_workflow_run)
+            gh.check_for_new_workflow_run_by_id(&initial_workflow_run, &arg_print_url)
         }
         Some(("force", args)) => {
             let arg_workflow_name = args.get_one::<String>("workflow");
+            let arg_print_url = args.get_one::<bool>("url").unwrap_or_else(|| &false);
+
             let selected_workflow_name = {
                 if arg_workflow_name.is_none() {
                     gh.select_workflow_name()
@@ -130,7 +139,7 @@ fn main() {
             git::commit_amend_no_edit().unwrap();
             git::push(true).expect("failed to push");
 
-            gh.check_for_new_workflow_run_by_id(&initial_workflow_run)
+            gh.check_for_new_workflow_run_by_id(&initial_workflow_run, arg_print_url)
         }
         Some(("config", args)) => {
             let arg_hostname = args.get_one::<String>("hostname");

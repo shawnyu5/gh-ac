@@ -154,7 +154,11 @@ impl Gh<'_> {
     /// check for a new workflow run with an id new workflow runs
     ///
     /// * `old_workflow_run`: the last workflow run that was observed in the repo
-    pub fn check_for_new_workflow_run_by_id(&self, old_workflow_run: &WorkflowRun) {
+    pub fn check_for_new_workflow_run_by_id(
+        &self,
+        old_workflow_run: &WorkflowRun,
+        print_url: &bool,
+    ) {
         info!("waiting for 3 seconds");
         std::thread::sleep(std::time::Duration::from_secs(3));
         loop {
@@ -168,22 +172,24 @@ impl Gh<'_> {
                 std::thread::sleep(std::time::Duration::from_secs(3));
                 continue;
             }
-            // println!("{}", &current_workflow_run.html_url);
-
-            match Command::new(get_browser())
-                .arg(&current_workflow_run.html_url)
-                .output()
-            {
-                Ok(_) => {
-                    info!("Opening {} in browser", &current_workflow_run.html_url);
-                }
-                Err(_) => {
-                    error!(
+            if *print_url {
+                println!("{}", &current_workflow_run.html_url);
+            } else {
+                match Command::new(get_browser())
+                    .arg(&current_workflow_run.html_url)
+                    .output()
+                {
+                    Ok(_) => {
+                        info!("Opening {} in browser", &current_workflow_run.html_url);
+                    }
+                    Err(_) => {
+                        error!(
                         "failed to open browser. Please open the following url in your browser: {}",
                         &current_workflow_run.html_url
                     )
-                }
-            };
+                    }
+                };
+            }
 
             break;
         }
