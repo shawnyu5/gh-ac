@@ -3,6 +3,7 @@ use dialoguer::{console::Term, theme::ColorfulTheme, FuzzySelect};
 use log::{debug, error, info, trace};
 use serde_derive::{Deserialize, Serialize};
 use std::{
+    env,
     fmt::Display,
     process::{self, Command},
 };
@@ -140,6 +141,9 @@ impl Gh<'_> {
                 .into_iter()
                 .filter(|e| e.state == "active")
                 .collect();
+
+            // update total count after filtering
+            workflows.total_count = workflows.workflows.len();
             return Ok(workflows);
         } else {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -149,8 +153,12 @@ impl Gh<'_> {
 
     /// check for a new workflow run with an id new workflow runs
     ///
-    /// * `old_workflow_run`: the last workflow run we are looking in the repo
-    pub fn check_for_new_workflow_run_by_id(&self, old_workflow_run: &WorkflowRun) {
+    /// * `old_workflow_run`: the last workflow run that was observed in the repo
+    pub fn check_for_new_workflow_run_by_id(
+        &self,
+        old_workflow_run: &WorkflowRun,
+        print_url: &bool,
+    ) {
         info!("waiting for 3 seconds");
         std::thread::sleep(std::time::Duration::from_secs(3));
         loop {
@@ -164,7 +172,25 @@ impl Gh<'_> {
                 std::thread::sleep(std::time::Duration::from_secs(3));
                 continue;
             }
-            println!("{}", current_workflow_run.html_url);
+            if *print_url {
+                println!("{}", &current_workflow_run.html_url);
+            } else {
+                match Command::new(get_browser())
+                    .arg(&current_workflow_run.html_url)
+                    .output()
+                {
+                    Ok(_) => {
+                        info!("Opening {} in browser", &current_workflow_run.html_url);
+                    }
+                    Err(_) => {
+                        error!(
+                        "failed to open browser. Please open the following url in your browser: {}",
+                        &current_workflow_run.html_url
+                    )
+                    }
+                };
+            }
+
             break;
         }
     }
@@ -176,8 +202,7 @@ impl Gh<'_> {
         let workflows = self.repo_workflows().unwrap_or_default();
         trace!("workflows: {:?}", workflows);
 
-        // compare workflows.len() instead of `workflows.total_count` cuz we are filtering inactive workflows in `repo_workflows()`
-        if &workflows.workflows.len() > &1 {
+        if &workflows.total_count > &1 {
             let selection_index = FuzzySelect::with_theme(&ColorfulTheme::default())
                 .items(&workflows.workflows)
                 .default(0)
@@ -195,6 +220,10 @@ impl Gh<'_> {
     }
 }
 
+/// get the default browser
+fn get_browser() -> String {
+    return env::var("BROWSER").unwrap_or_else(|_| "open".to_string());
+}
 /// workflow runs of a repo from gh api
 #[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorkflowRuns {
@@ -225,7 +254,7 @@ pub struct WorkflowRun {
 /// all workflows of a repo
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Workflows {
-    pub total_count: i64,
+    pub total_count: usize,
     pub workflows: Vec<Workflow>,
 }
 
