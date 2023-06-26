@@ -60,6 +60,7 @@ pub fn check_unpushed_changes() -> Result<bool> {
     let root = root_dir().unwrap();
     let root = Path::new(&root);
     debug!("root: {}", root.display());
+    debug!("root exists: {}", root.exists());
     set_current_dir(root).unwrap();
 
     // Open the repository in the current directory
