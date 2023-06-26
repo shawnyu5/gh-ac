@@ -168,13 +168,15 @@ impl Gh<'_> {
                 std::thread::sleep(std::time::Duration::from_secs(3));
                 continue;
             }
-            println!("{}", &current_workflow_run.html_url);
+            // println!("{}", &current_workflow_run.html_url);
 
             match Command::new(get_browser())
                 .arg(&current_workflow_run.html_url)
                 .output()
             {
-                Ok(_) => {}
+                Ok(_) => {
+                    info!("Opening {} in browser", &current_workflow_run.html_url);
+                }
                 Err(_) => {
                     error!(
                         "failed to open browser. Please open the following url in your browser: {}",
@@ -246,7 +248,7 @@ pub struct WorkflowRun {
 /// all workflows of a repo
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Workflows {
-    pub total_count: i64,
+    pub total_count: usize,
     pub workflows: Vec<Workflow>,
 }
 
