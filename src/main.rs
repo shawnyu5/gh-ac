@@ -4,7 +4,7 @@ use std::process;
 
 use crate::gh::Gh;
 use clap::ArgAction;
-use clap::{arg, command, ArgMatches, Command};
+use clap::{arg, command, Command};
 use dialoguer::Confirm;
 use env_logger::Env;
 use git::check_unpushed_changes;
@@ -18,8 +18,8 @@ struct Config {
     hostname: Option<String>,
 }
 
-fn main() {
-    let cli: ArgMatches = command!()
+fn build_cli() -> Command {
+    return command!()
         .arg(
             arg!(-v --verbose "increase verbosity")
                 .action(ArgAction::Count)
@@ -42,8 +42,10 @@ fn main() {
                     arg!(--hostname <HOSTNAME> "github hostname. ie mycorp.github.com")
                         .required(true),
                 ),
-        )
-        .get_matches();
+        );
+}
+fn main() {
+    let cli = build_cli().get_matches();
 
     let verbose_count = &cli.get_count("verbose");
     if verbose_count == &(1 as u8) {
@@ -139,7 +141,12 @@ fn main() {
             info!("config saved");
         }
         _ => {
-            error!("no subcommand provided, exiting");
+            match Command::print_help(&mut build_cli()) {
+                Ok(_) => {}
+                Err(_) => {
+                    error!("Failed to print help");
+                }
+            };
         }
     }
 }
