@@ -1,16 +1,17 @@
 mod gh;
 mod git;
-use std::process;
-
 use crate::gh::Gh;
 use clap::ArgAction;
-use clap::{arg, command, ArgMatches, Command};
+use clap::{arg, command, Command};
+use clap_complete::shells::Fish;
+use clap_complete::{generate, shells::Bash, shells::Zsh};
 use dialoguer::Confirm;
 use env_logger::Env;
 use git::check_unpushed_changes;
 use log::{error, info};
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
+use std::{io, process};
 
 #[derive(Default, Debug, Serialize, Deserialize, Clone)]
 struct Config {
@@ -18,8 +19,8 @@ struct Config {
     hostname: Option<String>,
 }
 
-fn main() {
-    let cli: ArgMatches = command!()
+fn build_cli() -> Command {
+    return command!()
         .arg(
             arg!(-v --verbose "increase verbosity")
                 .action(ArgAction::Count)
@@ -43,7 +44,12 @@ fn main() {
                         .required(true),
                 ),
         )
-        .get_matches();
+        .subcommand(
+            Command::new("completion").about("generates completion scripts for your shell"),
+        );
+}
+fn main() {
+    let cli = build_cli().get_matches();
 
     let verbose_count = &cli.get_count("verbose");
     if verbose_count == &(1 as u8) {
@@ -138,8 +144,27 @@ fn main() {
             confy::store("gh-ac", None, config).unwrap();
             info!("config saved");
         }
+        Some(("completion", _)) => {
+            let shell = {
+                match std::env::var_os("SHELL") {
+                    Some(shell) => shell.to_str().unwrap().to_owned(),
+                    None => {
+                        error!("Could not determine current shell");
+                        process::exit(1);
+                    }
+                }
+            };
+
+            if shell.contains("zsh") {
+                generate(Zsh, &mut build_cli(), "gh-ac", &mut io::stdout());
+            } else if shell.contains("bash") {
+                generate(Bash, &mut build_cli(), "gh-ac", &mut io::stdout());
+            } else if shell.contains("fish") {
+                generate(Fish, &mut build_cli(), "gh-ac", &mut io::stdout());
+            }
+        }
         _ => {
-            error!("no subcommand provided, exiting");
+            Command::print_help(&mut build_cli()).unwrap();
         }
     }
 }
