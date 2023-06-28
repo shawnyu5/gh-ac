@@ -7,7 +7,6 @@ use clap::ArgAction;
 use clap::{arg, command, Command};
 use dialoguer::Confirm;
 use env_logger::Env;
-use git::check_unpushed_changes;
 use log::{error, info};
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
@@ -71,19 +70,6 @@ fn main() {
         Some(("push", args)) => {
             let arg_workflow_name = args.get_one::<String>("workflow");
             let arg_print_url = args.get_one::<bool>("url").unwrap_or_else(|| &false);
-
-            match check_unpushed_changes() {
-                Ok(changed) => {
-                    if !changed {
-                        info!("No unpushed commits. Exiting");
-                        process::exit(0);
-                    }
-                }
-                Err(e) => {
-                    error!("Error checking unpushed changes: {}", e.to_string());
-                    process::exit(1);
-                }
-            }
 
             let selected_workflow_name = {
                 if arg_workflow_name.is_none() {
