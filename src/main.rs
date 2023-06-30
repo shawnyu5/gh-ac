@@ -3,13 +3,50 @@ mod git;
 use std::{env, process};
 
 use crate::gh::Gh;
-use clap::ArgAction;
-use clap::{arg, command, Command};
+use clap::{arg, command, Args, Command, Subcommand};
+use clap::{ArgAction, Parser};
 use dialoguer::Confirm;
 use env_logger::Env;
 use log::{error, info};
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
+
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    #[arg(short, long, action = clap::ArgAction::Count, global = true)]
+    verbosity: u8,
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// push all unpushed commits
+    Push(PushArgs),
+    /// force push to trigger new workflow run(s)
+    Force(ForceArgs),
+}
+
+#[derive(Args)]
+struct PushArgs {
+    /// case insensitive name of the workflow to look for
+    #[arg(short, long)]
+    workflow: Option<String>,
+    /// print out the workflow url instead of opening it in browser
+    #[arg(long, action = clap::ArgAction::SetTrue)]
+    url: Option<bool>,
+}
+
+#[derive(Args)]
+struct ForceArgs {
+    /// case insensitive name of the workflow to look for
+    #[arg(short, long)]
+    workflow: Option<String>,
+    /// print out the workflow url instead of opening it in browser
+    #[arg(long, action = clap::ArgAction::SetTrue)]
+    url: Option<bool>,
+}
 
 #[derive(Default, Debug, Serialize, Deserialize, Clone)]
 struct Config {
@@ -49,6 +86,9 @@ fn build_cli() -> Command {
         );
 }
 fn main() {
+    let cli = Cli::parse();
+    return;
+
     let cli = build_cli().get_matches();
 
     let verbose_count = &cli.get_count("verbose");
