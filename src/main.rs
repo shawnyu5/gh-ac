@@ -7,6 +7,7 @@ use clap::ArgAction;
 use clap::{arg, command, Command};
 use dialoguer::Confirm;
 use env_logger::Env;
+use git::Git;
 use log::{error, info};
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
@@ -17,11 +18,17 @@ struct Config {
     hostname: Option<String>,
 }
 
+/// build the cli application
 fn build_cli() -> Command {
     return command!()
         .arg(
             arg!(-v --verbose "increase verbosity")
                 .action(ArgAction::Count)
+                .global(true),
+        )
+        .arg(
+            arg!(-q --quiet "dont print anything to stdout")
+                .action(ArgAction::SetTrue)
                 .global(true),
         )
         .subcommand(
@@ -52,7 +59,9 @@ fn main() {
     let cli = build_cli().get_matches();
 
     let verbose_count = &cli.get_count("verbose");
-    if verbose_count == &(1 as u8) {
+    if cli.get_flag("quiet") {
+        env_logger::Builder::from_env(Env::default().default_filter_or("")).init();
+    } else if verbose_count == &(1 as u8) {
         env_logger::Builder::from_env(Env::default().default_filter_or("warn")).init();
     } else if verbose_count == &(2 as u8) {
         env_logger::Builder::from_env(Env::default().default_filter_or("warn,debug")).init();
@@ -65,6 +74,7 @@ fn main() {
     // CLI config values
     let config: Config = confy::load("gh-ac", None).unwrap();
     let gh = Gh::new(&config.hostname.as_deref());
+    let git = Git::new(cli.get_flag("quiet"));
 
     match cli.subcommand() {
         Some(("push", args)) => {
@@ -83,7 +93,7 @@ fn main() {
                 .get_workflow_run_by_name(&selected_workflow_name)
                 .unwrap();
 
-            match git::push(false) {
+            match git.push(false) {
                 Ok(_) => {}
                 Err(e) => {
                     error!("Failed to push changes: {}", e.to_string());
@@ -105,7 +115,7 @@ fn main() {
                 }
             };
 
-            if git::check_staged_files()
+            if git.check_staged_files()
                 && !Confirm::new()
                     .with_prompt("There are staged changes. Are you sure you want to force push?")
                     .default(false)
@@ -122,8 +132,8 @@ fn main() {
                 .get_workflow_run_by_name(&selected_workflow_name)
                 .unwrap();
 
-            git::commit_amend_no_edit().unwrap();
-            git::push(true).expect("failed to push");
+            git.commit_amend_no_edit().unwrap();
+            git.push(true).expect("failed to push");
 
             gh.check_for_new_workflow_run_by_id(&initial_workflow_run, arg_print_url)
         }
