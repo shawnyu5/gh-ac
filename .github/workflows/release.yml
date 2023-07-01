@@ -17,11 +17,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: codfish/semantic-release-action@v2
         id: semantic_release
-        # env:
-          # GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update version in Cargo.toml
         if: steps.semantic_release.outputs.new-release-published == 'true'
