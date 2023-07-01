@@ -160,7 +160,8 @@ impl Gh {
         old_workflow_run: &WorkflowRun,
         print_url: &bool,
     ) {
-        let mut spinner = Spinner::new(Spinners::Star, "Looking for workflow...".into());
+        let mut spinner =
+            Spinner::with_timer(Spinners::Star, "Wating for workflow to start...".into());
         info!("sleep for 3 seconds");
         std::thread::sleep(std::time::Duration::from_secs(3));
         loop {
@@ -176,7 +177,7 @@ impl Gh {
             }
             if *print_url {
                 spinner.stop_with_message(format!("{}", &current_workflow_run.html_url));
-                info!("{}", &current_workflow_run.html_url);
+                info!("workflow found: {}", &current_workflow_run.html_url);
             } else {
                 match Command::new(get_browser())
                     .arg(&current_workflow_run.html_url)
