@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 use dialoguer::{console::Term, theme::ColorfulTheme, FuzzySelect};
 use log::{debug, error, info, trace};
 use serde_derive::{Deserialize, Serialize};
+use spinners::{Spinner, Spinners};
 use std::{
     env,
     fmt::Display,
@@ -159,7 +160,8 @@ impl Gh {
         old_workflow_run: &WorkflowRun,
         print_url: &bool,
     ) {
-        info!("waiting for 3 seconds");
+        let mut spinner = Spinner::new(Spinners::Star, "Looking for workflow...".into());
+        info!("sleep for 3 seconds");
         std::thread::sleep(std::time::Duration::from_secs(3));
         loop {
             let current_workflow_run = self
@@ -173,13 +175,18 @@ impl Gh {
                 continue;
             }
             if *print_url {
-                println!("{}", &current_workflow_run.html_url);
+                spinner.stop_with_message(format!("{}", &current_workflow_run.html_url));
+                info!("{}", &current_workflow_run.html_url);
             } else {
                 match Command::new(get_browser())
                     .arg(&current_workflow_run.html_url)
                     .output()
                 {
                     Ok(_) => {
+                        spinner.stop_with_message(format!(
+                            "Opening {} in browser",
+                            &current_workflow_run.html_url
+                        ));
                         info!("Opening {} in browser", &current_workflow_run.html_url);
                     }
                     Err(_) => {
