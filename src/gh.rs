@@ -8,15 +8,15 @@ use std::{
     process::{self, Command},
 };
 
-#[derive(Debug)]
-pub struct Gh<'a> {
+#[derive(Debug, Clone)]
+pub struct Gh {
     /// custom github api hostname
-    hostname: Option<&'a str>,
+    hostname: Option<String>,
     /// if the custom hostname should be used in this repo
     should_use_custom_hostname: bool,
 }
 
-impl Default for Gh<'_> {
+impl Default for Gh {
     fn default() -> Self {
         Self {
             hostname: Default::default(),
@@ -29,10 +29,10 @@ impl Display for Workflow {
         write!(f, "{} ({})", self.name, self.path)
     }
 }
-impl Gh<'_> {
-    pub fn new<'a>(hostname: &Option<&'a str>) -> Gh<'a> {
+impl Gh {
+    pub fn new(hostname: Option<String>) -> Gh {
         let mut gh = Gh {
-            hostname: *hostname,
+            hostname,
             ..Default::default()
         };
         gh.check_should_use_custom_hostname();
@@ -64,10 +64,10 @@ impl Gh<'_> {
     /// returns the args to pass to `gh api <args>`
     fn construct_gh_api_args<'a>(&'a self, args: &mut Vec<&'a str>) -> Vec<&'a str> {
         if self.should_use_custom_hostname {
-            match self.hostname {
+            match &self.hostname {
                 Some(hostname) => {
                     debug!("appending custom hostname to gh command");
-                    let mut gh_args = vec!["api", "--hostname", hostname];
+                    let mut gh_args = vec!["api", "--hostname", hostname.as_str()];
                     gh_args.append(args);
                     return gh_args;
                 }

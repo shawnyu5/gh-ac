@@ -1,6 +1,7 @@
 mod gh;
 mod git;
-use std::process;
+use std::sync::mpsc;
+use std::{process, thread};
 
 use crate::gh::Gh;
 use clap::Parser;
@@ -66,7 +67,7 @@ struct Config {
 fn main() {
     // CLI config values
     let config: Config = confy::load("gh-ac", None).unwrap();
-    let gh = Gh::new(&config.hostname.as_deref());
+    let gh = Gh::new(config.hostname);
     let cli = Cli::parse();
 
     match cli.verbosity {
@@ -113,6 +114,17 @@ fn main() {
             )
         }
         Commands::Force(args) => {
+            if git::check_staged_files()
+                && !Confirm::new()
+                    .with_prompt("There are staged changes. Are you sure you want to force push?")
+                    .default(false)
+                    .interact()
+                    .unwrap()
+            {
+                info!("Ok, aborting");
+                return;
+            }
+
             let selected_workflow_name = {
                 if args.workflow_name.is_none() {
                     gh.select_workflow_name()
@@ -121,30 +133,25 @@ fn main() {
                 }
             };
 
-            if git::check_staged_files()
-                && !Confirm::new()
-                    .with_prompt("There are staged changes. Are you sure you want to force push?")
-                    .default(false)
-                    .interact()
-                    .unwrap()
-            {
-                {
-                    info!("Ok, aborting");
-                    return;
-                }
-            }
+            let (sender, receiver) = mpsc::channel();
 
-            let initial_workflow_run = gh
-                .get_workflow_run_by_name(&selected_workflow_name)
-                .unwrap();
+            {
+                let gh = gh.clone();
+                thread::spawn(move || {
+                    let initial_workflow_run = gh
+                        .get_workflow_run_by_name(&selected_workflow_name)
+                        .unwrap();
+                    sender.send(initial_workflow_run).unwrap();
+                });
+            }
 
             git::commit_amend_no_edit().unwrap();
             git::push(true).expect("failed to push");
 
             gh.check_for_new_workflow_run_by_id(
-                &initial_workflow_run,
+                &receiver.recv().unwrap(),
                 &args.url.unwrap_or_else(|| false),
-            )
+            );
         }
         Commands::Config(args) => {
             let config = Config {
