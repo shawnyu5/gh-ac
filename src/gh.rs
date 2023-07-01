@@ -184,8 +184,10 @@ impl Gh {
                     .output()
                 {
                     Ok(_) => {
-                        spinner
-                            .stop_and_persist("🗸", format!("{}", &current_workflow_run.html_url));
+                        spinner.stop_and_persist(
+                            "🗸",
+                            format!("Opening {} in browser", &current_workflow_run.html_url),
+                        );
                         info!("Opening {} in browser", &current_workflow_run.html_url);
                     }
                     Err(_) => {
