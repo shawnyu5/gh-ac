@@ -176,7 +176,7 @@ impl Gh {
                 continue;
             }
             if *print_url {
-                spinner.stop_with_message(format!("{}", &current_workflow_run.html_url));
+                spinner.stop_and_persist("🗸", format!("{}", &current_workflow_run.html_url));
                 info!("workflow found: {}", &current_workflow_run.html_url);
             } else {
                 match Command::new(get_browser())
