@@ -72,17 +72,23 @@ fn main() {
 
     match cli.verbosity {
         1 => {
-            env_logger::Builder::from_env(Env::default().default_filter_or("warn")).init();
+            env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
         }
         2 => {
-            env_logger::Builder::from_env(Env::default().default_filter_or("warn,debug")).init();
+            env_logger::Builder::from_env(Env::default().default_filter_or("info,warn")).init();
         }
         3 => {
-            env_logger::Builder::from_env(Env::default().default_filter_or("warn,debug,trace"))
+            env_logger::Builder::from_env(Env::default().default_filter_or("info,warn,debug"))
                 .init();
         }
+        4 => {
+            env_logger::Builder::from_env(
+                Env::default().default_filter_or("info,warn,debug,trace"),
+            )
+            .init();
+        }
         _ => {
-            env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+            env_logger::Builder::from_env(Env::default().default_filter_or("")).init();
         }
     }
 
