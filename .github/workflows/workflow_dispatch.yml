@@ -1,6 +1,11 @@
 name: Dispatch Hello World
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        type: string
+        description: THE name
 
 jobs:
   hello_world:
