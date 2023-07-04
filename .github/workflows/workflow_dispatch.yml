@@ -6,6 +6,9 @@ on:
       name:
         type: string
         description: THE name
+      word:
+        type: string
+        description: THE string
 
 jobs:
   hello_world:
