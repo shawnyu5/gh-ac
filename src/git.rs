@@ -53,3 +53,18 @@ pub fn commit_amend_no_edit() -> Result<()> {
     println!("{}", stdout);
     return Ok(());
 }
+
+/// get the current branch name
+pub fn current_branch_name() -> String {
+    let output = Command::new("git")
+        .arg("rev-parse")
+        .arg("--abbrev-ref")
+        .arg("HEAD")
+        .output()
+        .unwrap();
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let mut stdout = stdout.into_owned();
+    stdout.pop();
+    return stdout;
+}

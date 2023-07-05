@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use dialoguer::{console::Term, theme::ColorfulTheme, FuzzySelect};
+use itertools::Itertools;
 use log::{debug, error, info, trace};
 use serde_derive::{Deserialize, Serialize};
 use spinners::{Spinner, Spinners};
@@ -224,6 +225,45 @@ impl Gh {
         } else {
             error!("no workflows found in repo, exiting");
             process::exit(0);
+        }
+    }
+
+    pub fn dispatch_workflow_run(
+        &self,
+        reference: String,
+        workflow_name: String,
+        body: Option<Vec<String>>,
+    ) -> Result<()> {
+        let mut spinner = Spinner::with_timer(Spinners::Dots9, "Dispatching workflow".into());
+        let mut args: Vec<String> = vec![
+            "workflow".to_string(),
+            "run".to_string(),
+            workflow_name,
+            "--ref".to_string(),
+            reference,
+        ];
+
+        if let Some(body) = body {
+            let body_args: Vec<String> = body
+                .into_iter()
+                .flat_map(|v| vec!["-f".to_string(), v.to_owned()])
+                .collect();
+            args.extend(body_args);
+        }
+        debug!("Gh args: {:?}", args);
+
+        let output = Command::new("gh")
+            .args(args)
+            .output()
+            .expect("to run workflow");
+
+        if output.status.success() {
+            spinner.stop_and_persist("🗸", "Workflow run dispatched successfully".into());
+            return Ok(());
+        } else {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            spinner.stop_with_newline();
+            return Err(anyhow!("Error running workflow: {}", stderr));
         }
     }
 }
