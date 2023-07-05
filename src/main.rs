@@ -119,22 +119,19 @@ fn main() {
                 }
             };
 
-            let initial_workflow_run = gh
-                .get_workflow_run_by_name(&selected_workflow_name)
-                .unwrap();
-
-            match git::push(false) {
+            let action = |_: &String| match git::push(false) {
                 Ok(_) => {}
                 Err(e) => {
                     error!("Failed to push changes: {}", e.to_string());
                     process::exit(1);
                 }
-            }
-
-            gh.check_for_new_workflow_run_by_id(
-                &initial_workflow_run,
-                &args.url.unwrap_or_else(|| false),
-            )
+            };
+            track_new_workflow(
+                action,
+                &gh,
+                selected_workflow_name,
+                args.url.unwrap_or(false),
+            );
         }
         Commands::Force(args) => {
             if git::check_staged_files()
@@ -156,24 +153,16 @@ fn main() {
                 }
             };
 
-            let (sender, receiver) = mpsc::channel();
+            let action = |_: &String| {
+                git::commit_amend_no_edit().unwrap();
+                git::push(true).expect("failed to push");
+            };
 
-            {
-                let gh = gh.clone();
-                thread::spawn(move || {
-                    let initial_workflow_run = gh
-                        .get_workflow_run_by_name(&selected_workflow_name)
-                        .unwrap();
-                    sender.send(initial_workflow_run).unwrap();
-                });
-            }
-
-            git::commit_amend_no_edit().unwrap();
-            git::push(true).expect("failed to push");
-
-            gh.check_for_new_workflow_run_by_id(
-                &receiver.recv().unwrap(),
-                &args.url.unwrap_or_else(|| false),
+            track_new_workflow(
+                action,
+                &gh,
+                selected_workflow_name,
+                args.url.unwrap_or(false),
             );
         }
         Commands::Dispatch(args) => {
@@ -185,26 +174,25 @@ fn main() {
                 }
             };
 
-            let initial_workflow_run = gh
-                .get_workflow_run_by_name(&selected_workflow_name)
-                .unwrap();
-
-            match gh.dispatch_workflow_run(
-                args.reference.unwrap_or_else(|| git::current_branch_name()),
+            let handler = |selected_workflow_name: &String| {
+                match gh.dispatch_workflow_run(
+                    args.reference.unwrap_or_else(|| git::current_branch_name()),
+                    &selected_workflow_name,
+                    &args.body,
+                ) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        error!("Failed to dispatch workflow: {}", e.to_string());
+                        process::exit(1);
+                    }
+                };
+            };
+            track_new_workflow(
+                handler,
+                &gh,
                 selected_workflow_name,
-                args.body,
-            ) {
-                Ok(_) => {}
-                Err(e) => {
-                    error!("Failed to dispatch workflow: {}", e.to_string());
-                    process::exit(1);
-                }
-            }
-
-            gh.check_for_new_workflow_run_by_id(
-                &initial_workflow_run,
-                &args.url.unwrap_or_else(|| false),
-            )
+                args.url.unwrap_or(false),
+            );
         }
         Commands::Config(args) => {
             let config = Config {
@@ -214,4 +202,31 @@ fn main() {
             info!("config saved");
         }
     }
+}
+/// Sends a request to GH api for the current list of workflows, then calls `func`, and watches for new workflows that gets triggered
+///
+/// * `trigger_workflow_run`: a function that accepts a workflow name as the single argument. It should perform an action that triggers new workflow runs
+/// * `gh`: the Gh instance
+/// * `workflow_name`: the workflow to look for
+/// * `print_url`: if the url to the workflow should be printed out instead of opened in the browser
+fn track_new_workflow<F>(trigger_workflow_run: F, gh: &Gh, workflow_name: String, print_url: bool)
+where
+    F: FnOnce(&String),
+{
+    let (sender, receiver) = mpsc::channel();
+
+    {
+        let gh = gh.clone();
+        let selected_workflow_name = workflow_name.clone();
+        thread::spawn(move || {
+            let initial_workflow_run = gh
+                .get_workflow_run_by_name(&selected_workflow_name)
+                .unwrap();
+            sender.send(initial_workflow_run).unwrap();
+        });
+    }
+
+    trigger_workflow_run(&workflow_name);
+
+    gh.check_for_new_workflow_run_by_id(&receiver.recv().unwrap(), &print_url);
 }
