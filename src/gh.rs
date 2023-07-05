@@ -1,6 +1,5 @@
 use anyhow::{anyhow, Result};
 use dialoguer::{console::Term, theme::ColorfulTheme, FuzzySelect};
-use itertools::Itertools;
 use log::{debug, error, info, trace};
 use serde_derive::{Deserialize, Serialize};
 use spinners::{Spinner, Spinners};

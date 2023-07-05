@@ -63,6 +63,9 @@ struct DispatchArgs {
     /// input to pass to the workflow, in the form `KEY=VALUE`
     #[arg(short = 'f', long = "form")]
     body: Option<Vec<String>>,
+    /// print out the workflow url instead of opening it in browser
+    #[arg(long, action = clap::ArgAction::SetTrue)]
+    url: Option<bool>,
 }
 
 #[derive(Args)]
@@ -174,7 +177,6 @@ fn main() {
             );
         }
         Commands::Dispatch(args) => {
-            dbg!(&args.body);
             let selected_workflow_name = {
                 if args.workflow_name.is_none() {
                     gh.select_workflow_name()
@@ -195,8 +197,14 @@ fn main() {
                 Ok(_) => {}
                 Err(e) => {
                     error!("Failed to dispatch workflow: {}", e.to_string());
+                    process::exit(1);
                 }
             }
+
+            gh.check_for_new_workflow_run_by_id(
+                &initial_workflow_run,
+                &args.url.unwrap_or_else(|| false),
+            )
         }
         Commands::Config(args) => {
             let config = Config {
