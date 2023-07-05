@@ -27,6 +27,8 @@ enum Commands {
     Push(PushArgs),
     /// force push to trigger new workflow run(s)
     Force(ForceArgs),
+    /// create a workflow dispatch event
+    Dispatch(DispatchArgs),
     /// set configuration values
     Config(ConfigArgs),
 }
@@ -46,6 +48,21 @@ struct ForceArgs {
     /// case insensitive name of the workflow to look for
     #[arg(short, long = "workflow")]
     workflow_name: Option<String>,
+    /// print out the workflow url instead of opening it in browser
+    #[arg(long, action = clap::ArgAction::SetTrue)]
+    url: Option<bool>,
+}
+#[derive(Args)]
+struct DispatchArgs {
+    /// case insensitive name of the workflow to look for
+    #[arg(short, long = "workflow")]
+    workflow_name: Option<String>,
+    /// branch or commit reference
+    #[arg(long = "ref")]
+    reference: Option<String>,
+    /// input to pass to the workflow, in the form `KEY=VALUE`
+    #[arg(short = 'f', long = "form")]
+    body: Option<Vec<String>>,
     /// print out the workflow url instead of opening it in browser
     #[arg(long, action = clap::ArgAction::SetTrue)]
     url: Option<bool>,
@@ -158,6 +175,36 @@ fn main() {
                 &receiver.recv().unwrap(),
                 &args.url.unwrap_or_else(|| false),
             );
+        }
+        Commands::Dispatch(args) => {
+            let selected_workflow_name = {
+                if args.workflow_name.is_none() {
+                    gh.select_workflow_name()
+                } else {
+                    args.workflow_name.clone().unwrap().to_string()
+                }
+            };
+
+            let initial_workflow_run = gh
+                .get_workflow_run_by_name(&selected_workflow_name)
+                .unwrap();
+
+            match gh.dispatch_workflow_run(
+                args.reference.unwrap_or_else(|| git::current_branch_name()),
+                selected_workflow_name,
+                args.body,
+            ) {
+                Ok(_) => {}
+                Err(e) => {
+                    error!("Failed to dispatch workflow: {}", e.to_string());
+                    process::exit(1);
+                }
+            }
+
+            gh.check_for_new_workflow_run_by_id(
+                &initial_workflow_run,
+                &args.url.unwrap_or_else(|| false),
+            )
         }
         Commands::Config(args) => {
             let config = Config {
