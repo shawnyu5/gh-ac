@@ -119,22 +119,28 @@ fn main() {
                 }
             };
 
-            let initial_workflow_run = gh
-                .get_workflow_run_by_name(&selected_workflow_name)
-                .unwrap();
+            // let initial_workflow_run = gh
+            // .get_workflow_run_by_name(&selected_workflow_name)
+            // .unwrap();
 
-            match git::push(false) {
+            let action = |_: &String| match git::push(false) {
                 Ok(_) => {}
                 Err(e) => {
                     error!("Failed to push changes: {}", e.to_string());
                     process::exit(1);
                 }
-            }
+            };
+            track_new_workflow(
+                action,
+                &gh,
+                selected_workflow_name,
+                args.url.unwrap_or(false),
+            );
 
-            gh.check_for_new_workflow_run_by_id(
-                &initial_workflow_run,
-                &args.url.unwrap_or_else(|| false),
-            )
+            // gh.check_for_new_workflow_run_by_id(
+            // &initial_workflow_run,
+            // &args.url.unwrap_or_else(|| false),
+            // )
         }
         Commands::Force(args) => {
             if git::check_staged_files()
