@@ -231,7 +231,7 @@ impl Gh {
         &self,
         reference: String,
         workflow_name: String,
-        body: Option<Vec<String>>,
+        body: &Option<Vec<String>>,
     ) -> Result<()> {
         let mut spinner = Spinner::with_timer(Spinners::Dots9, "Dispatching workflow".into());
         let mut args: Vec<String> = vec![

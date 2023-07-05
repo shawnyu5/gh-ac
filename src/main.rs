@@ -189,16 +189,22 @@ fn main() {
                 .get_workflow_run_by_name(&selected_workflow_name)
                 .unwrap();
 
+            track_new_workflows(handler, &args);
+
             match gh.dispatch_workflow_run(
                 args.reference.unwrap_or_else(|| git::current_branch_name()),
                 selected_workflow_name,
-                args.body,
+                &args.body,
             ) {
                 Ok(_) => {}
                 Err(e) => {
                     error!("Failed to dispatch workflow: {}", e.to_string());
                     process::exit(1);
                 }
+            }
+
+            fn handler() {
+                println!("hello");
             }
 
             gh.check_for_new_workflow_run_by_id(
@@ -214,4 +220,24 @@ fn main() {
             info!("config saved");
         }
     }
+}
+fn track_new_workflows<F>(func: F, gh: &Gh, selected_workflow_name: String, print_url: bool)
+where
+    F: FnOnce(),
+{
+    let (sender, receiver) = mpsc::channel();
+
+    {
+        let gh = gh.clone();
+        thread::spawn(move || {
+            let initial_workflow_run = gh
+                .get_workflow_run_by_name(&selected_workflow_name)
+                .unwrap();
+            sender.send(initial_workflow_run).unwrap();
+        });
+    }
+
+    func();
+
+    gh.check_for_new_workflow_run_by_id(&receiver.recv().unwrap(), &print_url);
 }
