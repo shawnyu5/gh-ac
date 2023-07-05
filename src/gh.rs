@@ -230,14 +230,14 @@ impl Gh {
     pub fn dispatch_workflow_run(
         &self,
         reference: String,
-        workflow_name: String,
+        workflow_name: &String,
         body: &Option<Vec<String>>,
     ) -> Result<()> {
         let mut spinner = Spinner::with_timer(Spinners::Dots9, "Dispatching workflow".into());
         let mut args: Vec<String> = vec![
             "workflow".to_string(),
             "run".to_string(),
-            workflow_name,
+            workflow_name.to_string(),
             "--ref".to_string(),
             reference,
         ];
