@@ -10,3 +10,5 @@
 - `gh ac dispatch` - create a workflow dispatch event
   - `gh ac dispatch --ref <branch_name>` to select the branch to dispatch the workflow from. Defaults to the current branch
   - input can be passed to the workflow in the form `gh ac dispatch -d key=val -d key2=val2`
+- `gh ac cleanup` - cleanup old workflow that has been renamed. Old workflows are identified by workflows that has the same name as the path to the workflow file.
+  - For example, a workflow called `.github/workflows/ci.yml`, whose path is `.github/workflows/ci.yml` will be considered an old workflow, which will be cleaned up.
