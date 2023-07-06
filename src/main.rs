@@ -206,7 +206,7 @@ fn main() {
                 }
             };
 
-            let unused_worflow_ids: Vec<Workflow> = workflows
+            let unused_worflows: Vec<Workflow> = workflows
                 .workflows
                 .into_iter()
                 // unused workflow are workflow with their name the same as their path
@@ -214,32 +214,36 @@ fn main() {
                 // .map(|w| w.id)
                 .collect();
 
-            debug!("Unused workflow ids: {:?}", unused_worflow_ids);
+            debug!("Unused workflows: {:?}", unused_worflows);
+            if unused_worflows.is_empty() {
+                println!("No unused workflows found");
+                process::exit(0);
+            }
 
-            unused_worflow_ids.iter().for_each(|w| {
+            unused_worflows.iter().for_each(|w| {
+                if !Confirm::new()
+                    .with_prompt(format!("Delete workflow {}", w.name))
+                    .default(false)
+                    .interact()
+                    .unwrap()
+                {
+                    return;
+                }
+                let mut spinner =
+                    Spinner::with_timer(Spinners::Flip, format!("Deleting workflow {}...", w.name));
                 let workflow_runs = gh.list_workflow_runs_for_workflow(&w.id).unwrap();
 
                 workflow_runs.workflow_runs.iter().for_each(|w| {
-                    if Confirm::new()
-                        .with_prompt(format!("Delete workflow {}", w.name))
-                        .default(false)
-                        .interact()
-                        .unwrap()
-                    {
-                        let mut spinner = Spinner::with_timer(
-                            Spinners::Flip,
-                            format!("Deleting workflow {}...", w.name),
-                        );
-                        info!("Deleting workflow run id {}({})", w.id, w.name);
-                        match gh.delete_workflow_run(w.id) {
-                            Ok(_) => (),
-                            Err(e) => {
-                                error!("Unable to delete workflow run {}: {}", w.id, e)
-                            }
-                        };
-                        spinner.stop_with_message("🗸 Done deleting workflow runs".to_string());
+                    info!("Deleting workflow run id {}({})", w.id, w.name);
+                    match gh.delete_workflow_run(w.id) {
+                        Ok(_) => (),
+                        Err(e) => {
+                            error!("Unable to delete workflow run {}: {}", w.id, e)
+                        }
                     };
                 });
+
+                spinner.stop_with_message("🗸 Done deleting workflow runs".to_string());
             });
         }
         Commands::Config(args) => {
