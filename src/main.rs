@@ -8,6 +8,7 @@ use clap::Parser;
 use clap::{arg, command, Args, Subcommand};
 use dialoguer::Confirm;
 use env_logger::Env;
+use gh::Workflow;
 use log::{error, info};
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
@@ -29,6 +30,8 @@ enum Commands {
     Force(ForceArgs),
     /// create a workflow dispatch event
     Dispatch(DispatchArgs),
+    /// delete old non existent workflows
+    Delete,
     /// set configuration values
     Config(ConfigArgs),
 }
@@ -193,6 +196,22 @@ fn main() {
                 selected_workflow_name,
                 args.url.unwrap_or(false),
             );
+        }
+        Commands::Delete => {
+            let workflows = match gh.repo_workflows() {
+                Ok(workflows) => workflows,
+                Err(e) => {
+                    error!("Unable to fetch repo workflows: {}", e);
+                    process::exit(1);
+                }
+            };
+
+            let unused_worflows: Vec<Workflow> = workflows
+                .workflows
+                .into_iter()
+                .filter(|w| w.name == w.path)
+                .collect();
+            dbg!(unused_worflows);
         }
         Commands::Config(args) => {
             let config = Config {
