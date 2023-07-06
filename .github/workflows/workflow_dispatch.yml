@@ -1,4 +1,4 @@
-name: Dispatch Hello World
+name: ".github/workflows/workflow_dispatch.yml"
 
 on:
   workflow_dispatch:

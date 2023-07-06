@@ -3,14 +3,15 @@ mod git;
 use std::sync::mpsc;
 use std::{process, thread};
 
-use crate::gh::Gh;
+use crate::gh::{Gh, SingleWorkflowRuns, Workflow};
 use clap::Parser;
 use clap::{arg, command, Args, Subcommand};
 use dialoguer::Confirm;
 use env_logger::Env;
-use log::{error, info};
+use log::{debug, error, info};
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
+use spinners::{Spinner, Spinners};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -29,6 +30,8 @@ enum Commands {
     Force(ForceArgs),
     /// create a workflow dispatch event
     Dispatch(DispatchArgs),
+    /// clean up logs for old non existent workflows
+    Cleanup,
     /// set configuration values
     Config(ConfigArgs),
 }
@@ -193,6 +196,55 @@ fn main() {
                 selected_workflow_name,
                 args.url.unwrap_or(false),
             );
+        }
+        Commands::Cleanup => {
+            let workflows = match gh.repo_workflows() {
+                Ok(workflows) => workflows,
+                Err(e) => {
+                    error!("Unable to fetch repo workflows: {}", e);
+                    process::exit(1);
+                }
+            };
+
+            let unused_worflows: Vec<Workflow> = workflows
+                .workflows
+                .into_iter()
+                // unused workflow are workflow with their name the same as their path
+                .filter(|w| w.name == w.path)
+                // .map(|w| w.id)
+                .collect();
+
+            debug!("Unused workflows: {:?}", unused_worflows);
+            if unused_worflows.is_empty() {
+                println!("No unused workflows found");
+                process::exit(0);
+            }
+
+            unused_worflows.iter().for_each(|w| {
+                if !Confirm::new()
+                    .with_prompt(format!("Delete workflow {}", w.name))
+                    .default(false)
+                    .interact()
+                    .unwrap()
+                {
+                    return;
+                }
+                let mut spinner =
+                    Spinner::with_timer(Spinners::Flip, format!("Deleting workflow {}...", w.name));
+                let workflow_runs = gh.list_workflow_runs_for_workflow(&w.id).unwrap();
+
+                workflow_runs.workflow_runs.iter().for_each(|w| {
+                    info!("Deleting workflow run id {}({})", w.id, w.name);
+                    match gh.delete_workflow_run(w.id) {
+                        Ok(_) => (),
+                        Err(e) => {
+                            error!("Unable to delete workflow run {}: {}", w.id, e)
+                        }
+                    };
+                });
+
+                spinner.stop_with_message("🗸 Done deleting workflow runs".to_string());
+            });
         }
         Commands::Config(args) => {
             let config = Config {
