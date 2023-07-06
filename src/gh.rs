@@ -140,7 +140,7 @@ impl Gh {
             workflows.workflows = workflows
                 .workflows
                 .into_iter()
-                .filter(|e| e.state == "active")
+                .filter(|e| e.state.clone().unwrap_or("".to_string()) == "active")
                 .collect();
 
             // update total count after filtering
@@ -149,6 +149,25 @@ impl Gh {
         } else {
             let stderr = String::from_utf8_lossy(&output.stderr);
             return Err(anyhow!("failed getting repo workflows...: {}", stderr));
+        }
+    }
+
+    /// list workflow runs for a workflow
+    ///
+    /// * `workflow_id`: the id of the workflow to get workflow runs for
+    pub fn list_workflow_runs_for_workflow(&self, workflow_id: &i64) -> Result<SingleWorkflowRuns> {
+        let url = format!("/repos/{{owner}}/{{repo}}/actions/workflows/{workflow_id}/runs");
+        let args = self.construct_gh_api_args(&mut vec![url.as_str()]);
+        trace!("gh api {}: {:?}", url, args);
+
+        let output = Command::new("gh").args(&args).output()?;
+
+        if output.status.success() {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            return Ok(serde_json::from_str::<SingleWorkflowRuns>(&stdout).unwrap());
+        } else {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(anyhow!("failed getting workflow runs...: {}", stderr));
         }
     }
 
@@ -265,6 +284,24 @@ impl Gh {
             return Err(anyhow!("Error running workflow: {}", stderr));
         }
     }
+    /// delete a specific run of a workflow
+    ///
+    /// * `run_id`: the workflow run id to delete
+    pub fn delete_workflow_run(&self, run_id: i64) -> Result<()> {
+        let url = format!("/repos/{{owner}}/{{repo}}/actions/runs/{}", run_id);
+        let args = self.construct_gh_api_args(&mut vec![url.as_str(), "--method", "DELETE"]);
+        debug!("Deleting workfow run: {}", run_id);
+        debug!("Gh args: {:?}", args);
+
+        let output = Command::new("gh").args(args).output()?;
+
+        if output.status.success() {
+            return Ok(());
+        } else {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(anyhow!("failed deleting workflow run logs: {}", stderr));
+        }
+    }
 }
 
 /// get the default browser
@@ -305,6 +342,13 @@ pub struct Workflows {
     pub workflows: Vec<Workflow>,
 }
 
+/// all workflow runs for a single workflow
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SingleWorkflowRuns {
+    pub total_count: usize,
+    pub workflow_runs: Vec<Workflow>,
+}
+
 /// a single workflow of a repo
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Workflow {
@@ -312,7 +356,7 @@ pub struct Workflow {
     pub node_id: String,
     pub name: String,
     pub path: String,
-    pub state: String,
+    pub state: Option<String>,
     pub created_at: String,
     pub updated_at: String,
     pub url: String,
