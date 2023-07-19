@@ -271,9 +271,13 @@ where
         let gh = gh.clone();
         let selected_workflow_name = workflow_name.clone();
         thread::spawn(move || {
-            let initial_workflow_run = gh
-                .get_workflow_run_by_name(&selected_workflow_name)
-                .unwrap();
+            let initial_workflow_run = match gh.get_workflow_run_by_name(&selected_workflow_name) {
+                Ok(w) => w,
+                Err(e) => {
+                    error!("{}", e);
+                    process::exit(1);
+                }
+            };
             sender.send(initial_workflow_run).unwrap();
         });
     }
