@@ -3,14 +3,8 @@ name: Rust
 on:
   push:
     branches: ["master"]
-    paths:
-      - "src/**"
-      - ".github/**"
   pull_request:
     branches: ["master"]
-    paths:
-      - "src/**"
-      - ".github/**"
 
 env:
   CARGO_TERM_COLOR: always
