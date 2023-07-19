@@ -18,7 +18,7 @@ Trigger Github action runs, and open the action run in the browser.
 gh extension install https://github.com/shawnyu5/gh-ac
 ```
 
-> **Note** Since rust binaries are dymically linked. Sometimes the precompiled binary will not work on your system. In the case, you must clone the repo and run `./script/build.sh && gh extension install .` to compile and install the extension locally
+> **Note** Since rust binaries are dymically linked. Sometimes the precompiled binary will not work on your system. In the case, you must clone the repo and run `./script/build.sh && gh extension install .` to compile and install the extension locally. This requires rust to be installed on your system
 
 ## Usage
 
