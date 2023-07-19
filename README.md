@@ -16,7 +16,7 @@ gh extension install https://github.com/shawnyu5/gh-ac
 
 ![gh_ac_push](img/gh_ac_push.png)
 
-- `gh ac force` - get the most recent workflow for current repo. Perform a `git commit --amend --no-edit && git push --force` on the current branch, and open the latest workflow run in the browser.
+- `gh ac force` - get the most recent workflow for current repo. Perform a `git commit --amend --no-edit && git push --force` on the current branch. Allow the user to select the workflow run to fetch, and open the latest workflow run in the browser.
   - if there are currently staged changes, prompt for confirmation before proceeding
 
 ![gh_ac_force](img/gh_ac_force.png)
