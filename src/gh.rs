@@ -223,23 +223,31 @@ impl Gh {
     }
 
     /// If there are more than 1 workflows defined in the repo, prompt the user for which workflow they would like to use
+    /// prompt: The prompt to display to the user. Defaults to `Select a workflow`
     ///
-    /// returns the user selected workflow id
-    pub fn select_workflow_name(&self) -> String {
+    /// returns the user selected workflow object
+    pub fn select_workflow(&self, prompt: Option<&str>) -> Workflow {
         let workflows = self.repo_workflows().unwrap_or_default();
         trace!("workflows: {:?}", workflows);
 
         if &workflows.total_count > &1 {
-            let selection_index = FuzzySelect::with_theme(&ColorfulTheme::default())
+            let selection_index = match FuzzySelect::with_theme(&ColorfulTheme::default())
+                .with_prompt(prompt.unwrap_or_else(|| "Select a workflow"))
                 .items(&workflows.workflows)
                 .default(0)
                 .interact_on_opt(&Term::stdout())
                 .unwrap()
-                .unwrap();
+            {
+                Some(idx) => idx,
+                None => {
+                    info!("no workflow selected, exiting");
+                    process::exit(1);
+                }
+            };
 
-            workflows.workflows[selection_index].name.clone()
+            workflows.workflows[selection_index].clone()
         } else if &workflows.workflows.len() == &1 {
-            workflows.workflows[0].name.clone()
+            workflows.workflows[0].clone()
         } else {
             error!("no workflows found in repo, exiting");
             process::exit(0);
