@@ -3,7 +3,7 @@ mod git;
 use std::sync::mpsc;
 use std::{process, thread};
 
-use crate::gh::{Gh, SingleWorkflowRuns, Workflow};
+use crate::gh::{Gh, Workflow};
 use clap::Parser;
 use clap::{arg, command, Args, Subcommand};
 use dialoguer::Confirm;
@@ -31,7 +31,7 @@ enum Commands {
     /// create a workflow dispatch event
     Dispatch(DispatchArgs),
     /// clean up logs for old non existent workflows
-    Cleanup,
+    Cleanup(CleanupArgs),
     /// set configuration values
     Config(ConfigArgs),
 }
@@ -69,6 +69,13 @@ struct DispatchArgs {
     /// print out the workflow url instead of opening it in browser
     #[arg(long, action = clap::ArgAction::SetTrue)]
     url: Option<bool>,
+}
+
+#[derive(Args)]
+struct CleanupArgs {
+    /// prompt user for workflow to cleanup
+    #[arg(long, action = clap::ArgAction::SetTrue)]
+    all: Option<bool>,
 }
 
 #[derive(Args)]
@@ -116,7 +123,7 @@ fn main() {
         Commands::Push(args) => {
             let selected_workflow_name = {
                 if args.workflow_name.is_none() {
-                    gh.select_workflow_name()
+                    gh.select_workflow(None).name
                 } else {
                     args.workflow_name.clone().unwrap().to_string()
                 }
@@ -150,7 +157,7 @@ fn main() {
 
             let selected_workflow_name = {
                 if args.workflow_name.is_none() {
-                    gh.select_workflow_name()
+                    gh.select_workflow(None).name
                 } else {
                     args.workflow_name.unwrap().trim().to_string()
                 }
@@ -171,7 +178,7 @@ fn main() {
         Commands::Dispatch(args) => {
             let selected_workflow_name = {
                 if args.workflow_name.is_none() {
-                    gh.select_workflow_name()
+                    gh.select_workflow(None).name
                 } else {
                     args.workflow_name.clone().unwrap().to_string()
                 }
@@ -197,7 +204,7 @@ fn main() {
                 args.url.unwrap_or(false),
             );
         }
-        Commands::Cleanup => {
+        Commands::Cleanup(args) => {
             let workflows = match gh.repo_workflows() {
                 Ok(workflows) => workflows,
                 Err(e) => {
@@ -206,13 +213,19 @@ fn main() {
                 }
             };
 
-            let unused_worflows: Vec<Workflow> = workflows
-                .workflows
-                .into_iter()
-                // unused workflow are workflow with their name the same as their path
-                .filter(|w| w.name == w.path)
-                // .map(|w| w.id)
-                .collect();
+            let unused_worflows: Vec<Workflow> = {
+                if args.all.unwrap_or_else(|| false) {
+                    vec![gh.select_workflow(Some("Select a workflow to delete logs of"))]
+                } else {
+                    workflows
+                        .workflows
+                        .into_iter()
+                        // unused workflow are workflow with their name the same as their path
+                        .filter(|w| w.name == w.path)
+                        // .map(|w| w.id)
+                        .collect()
+                }
+            };
 
             debug!("Unused workflows: {:?}", unused_worflows);
             if unused_worflows.is_empty() {
@@ -221,11 +234,13 @@ fn main() {
             }
 
             unused_worflows.iter().for_each(|w| {
-                if !Confirm::new()
-                    .with_prompt(format!("Delete workflow {}", w.name))
-                    .default(false)
-                    .interact()
-                    .unwrap()
+                // dont prompt user for confirmation if user already selected a workflow to delete the logs of
+                if !args.all.unwrap_or_else(|| false)
+                    && !Confirm::new()
+                        .with_prompt(format!("Delete workflow logs for workflow `{}`", w.name))
+                        .default(false)
+                        .interact()
+                        .unwrap()
                 {
                     return;
                 }

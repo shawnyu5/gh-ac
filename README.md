@@ -41,6 +41,7 @@ gh extension install https://github.com/shawnyu5/gh-ac
 - `gh ac cleanup` - cleanup old workflows in the Github actions tab, whose workflow files has been renamed, or deleted. Old workflows are identified by workflows that has the same name as the path to the workflow file. Will prompt for confirmation before deletion.
   - This is no longer an issue in the Public Github. Workflows are automatically removed once their action files are deleted. This is still an issue in GHE.
   - For example, a workflow called `.github/workflows/ci.yml`, whose path is `.github/workflows/ci.yml` will be considered an old workflow, which will be cleaned up.
+- `gh ac cleanup --all` - rather than perform automatically filtering, prompt the user for which workflow logs they would like to delete.
 
 ## Trouble shooting
 
