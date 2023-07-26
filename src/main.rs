@@ -247,6 +247,11 @@ fn main() {
                 let mut spinner =
                     Spinner::with_timer(Spinners::Flip, format!("Deleting workflow {}...", w.name));
                 let workflow_runs = gh.list_workflow_runs_for_workflow(&w.id).unwrap();
+                debug!("Workflow runs count: {:?}", workflow_runs.total_count);
+                debug!(
+                    "Workflow runs length: {:?}",
+                    workflow_runs.workflow_runs.len()
+                );
 
                 workflow_runs.workflow_runs.iter().for_each(|w| {
                     info!("Deleting workflow run id {}({})", w.id, w.name);

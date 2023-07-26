@@ -156,7 +156,8 @@ impl Gh {
     ///
     /// * `workflow_id`: the id of the workflow to get workflow runs for
     pub fn list_workflow_runs_for_workflow(&self, workflow_id: &i64) -> Result<SingleWorkflowRuns> {
-        let url = format!("/repos/{{owner}}/{{repo}}/actions/workflows/{workflow_id}/runs");
+        let url =
+            format!("/repos/{{owner}}/{{repo}}/actions/workflows/{workflow_id}/runs?per_page=500");
         let args = self.construct_gh_api_args(&mut vec![url.as_str()]);
         trace!("gh api {}: {:?}", url, args);
 
