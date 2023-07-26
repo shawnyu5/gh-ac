@@ -20,6 +20,12 @@ gh extension install https://github.com/shawnyu5/gh-ac
 
 > **Note** Since rust binaries are dymically linked. Sometimes the precompiled binary will not work on your system. In the case, you must clone the repo and run `./script/build.sh && gh extension install .` to compile and install the extension locally. This requires rust to be installed on your system
 
+This extension uses the `$BROWSER` environment variable to determine the browser to use. Add the following to your `bashrc`
+
+```bash
+export BROWSER="path/to/browser"
+```
+
 ## Usage
 
 - `gh ac push` - push unpushed commits if there are any. Allow the user to select the workflow run to fetch, and open the latest workflow run in the browser.
