@@ -51,14 +51,14 @@ jobs:
       - name: Build project
         run: cargo build --release
 
+      - run: sudo chmod ugo+rwX .
+
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: "chore(AUTO): update app version [skip ci]"
           branch: master
           create_branch: false
-
-      - run: sudo chmod ugo+rwX .
 
       - uses: cli/gh-extension-precompile@v1
         with:
