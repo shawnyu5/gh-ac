@@ -31,7 +31,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      # - run: sudo chmod ugo+rwX .
+      - run: sudo chmod ugo+rwX .
 
       - uses: codfish/semantic-release-action@v2
         id: semantic_release
@@ -51,7 +51,7 @@ jobs:
       # - name: Build project
       #   run: cargo build --release
 
-      - run: sudo chmod ugo+rwX .
+      # - run: sudo chmod ugo+rwX .
 
       - uses: cli/gh-extension-precompile@v1
         with:
