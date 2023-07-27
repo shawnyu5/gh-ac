@@ -15,7 +15,13 @@
    "homepage": "https://github.com/shawnyu5/gh-ac#readme",
    "release": {
       "branches": [
-         "master"
+         {
+            "name": "master"
+         },
+         {
+            "name": "dev",
+            "prerelease": true
+         }
       ]
    }
 }
