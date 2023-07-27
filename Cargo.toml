@@ -1,6 +1,6 @@
 [package]
 name = "gh-ac"
-version = "12345"
+version = "1.2.3"
 description = "fire off github actions and open the lastest action run in browser"
 author = "Shawn Yu"
 edition = "2021"
