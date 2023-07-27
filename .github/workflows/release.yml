@@ -36,9 +36,8 @@ jobs:
           key: "package.version"
           value: ${{ steps.semantic_release.outputs.release-version }}
 
-      - uses: cli/gh-extension-precompile@v1
-        with:
-          build_script_override: "script/build.sh"
+      - name: Build project
+        run: cargo build --release
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v4
@@ -46,3 +45,7 @@ jobs:
           commit_message: "chore(AUTO): update app version [skip ci]"
           branch: master
           create_branch: false
+
+      - uses: cli/gh-extension-precompile@v1
+        with:
+          build_script_override: "script/build.sh"
