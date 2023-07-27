@@ -32,24 +32,24 @@ jobs:
         # with:
         #   fetch-depth: 0
 
-      - run: ls -l
-      # - run: sudo chmod ugo+rwX .
+      # - run: ls -l
+      # # - run: sudo chmod ugo+rwX .
 
-      - uses: codfish/semantic-release-action@v2
-        id: semantic_release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # - uses: codfish/semantic-release-action@v2
+      #   id: semantic_release
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install toml-cli
-        run: |
-          wget https://github.com/gnprice/toml-cli/releases/download/v0.2.3/toml-0.2.3-x86_64-linux.tar.gz
-          tar -xvf toml-0.2.3-x86_64-linux.tar.gz
-          mv toml-0.2.3-x86_64-linux/toml .
+      # - name: Install toml-cli
+      #   run: |
+      #     wget https://github.com/gnprice/toml-cli/releases/download/v0.2.3/toml-0.2.3-x86_64-linux.tar.gz
+      #     tar -xvf toml-0.2.3-x86_64-linux.tar.gz
+      #     mv toml-0.2.3-x86_64-linux/toml .
 
-      - name: Update version in Cargo.toml
-        if: steps.semantic_release.outputs.new-release-published == 'true'
-        run: |
-          ./toml set Cargo.toml package.version ${{ steps.semantic_release.outputs.release-version }} | tee Cargo.toml
+      # - name: Update version in Cargo.toml
+      #   if: steps.semantic_release.outputs.new-release-published == 'true'
+      #   run: |
+      #     ./toml set Cargo.toml package.version ${{ steps.semantic_release.outputs.release-version }} | tee Cargo.toml
 
       # - name: Update version in Cargo.toml
       #   if: steps.semantic_release.outputs.new-release-published == 'true'
