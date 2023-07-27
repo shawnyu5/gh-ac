@@ -36,13 +36,13 @@ jobs:
           key: "package.version"
           value: ${{ steps.semantic_release.outputs.release-version }}
 
-      - name: Commit changes
-        uses: stefanzweifel/git-auto-commit-action@v4
-        with:
-          commit_message: Update app version [skip ci]
-          branch: master
-          create_branch: false
-
       - uses: cli/gh-extension-precompile@v1
         with:
           build_script_override: "script/build.sh"
+
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "chore(AUTO): update app version [skip ci]"
+          branch: master
+          create_branch: false
