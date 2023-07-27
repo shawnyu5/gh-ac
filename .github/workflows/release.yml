@@ -29,27 +29,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-        # with:
-        #   fetch-depth: 0
-
-      # - run: ls -l
-      # # - run: sudo chmod ugo+rwX .
 
       - uses: codfish/semantic-release-action@v2
         id: semantic_release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # - name: Install toml-cli
-      #   run: |
-      #     wget https://github.com/gnprice/toml-cli/releases/download/v0.2.3/toml-0.2.3-x86_64-linux.tar.gz
-      #     tar -xvf toml-0.2.3-x86_64-linux.tar.gz
-      #     mv toml-0.2.3-x86_64-linux/toml .
-
-      # - name: Update version in Cargo.toml
-      #   # if: steps.semantic_release.outputs.new-release-published == 'true'
-      #   run: |
-      #     ./toml set Cargo.toml package.version "1.2.5" | tee Cargo.toml
 
       - name: Update version in Cargo.toml
         # if: steps.semantic_release.outputs.new-release-published == 'true'
@@ -60,24 +44,8 @@ jobs:
           # value: 1.2.3
           value: ${{ steps.semantic_release.outputs.release-version }}
 
-      # - run: sudo chmod ugo+rwX .
-      # - run: ls -la
-
-      # - name: Build project
-      #   run: cargo build --release
-
-      - run: ls -l
-
       - name: Cargo build project
         run: cargo build --release
-
-      # - name: Commit changes
-      #   run: |
-      #     git config user.name "github-actions[bot]"
-      #     git config user.email "noreply@github.action.com"
-      #     git add Cargo.* package.json
-      #     git commit -m "chore(AUTO): update app version [skip ci]"
-      #     git push origin ${{ github.ref_name }}
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v4
@@ -90,5 +58,3 @@ jobs:
         uses: cli/gh-extension-precompile@v1
         with:
           build_script_override: "script/build.sh"
-
-      - run: ls -l
