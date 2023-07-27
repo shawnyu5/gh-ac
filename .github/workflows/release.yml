@@ -32,6 +32,7 @@ jobs:
         with:
           fetch-depth: 0
 
+      - run: ls -l
       # - run: sudo chmod ugo+rwX .
 
       - uses: codfish/semantic-release-action@v2
