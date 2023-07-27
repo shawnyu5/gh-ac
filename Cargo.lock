@@ -268,7 +268,7 @@ dependencies = [
 
 [[package]]
 name = "gh-ac"
-version = "3.5.1"
+version = "3.5.7"
 dependencies = [
  "anyhow",
  "clap",
