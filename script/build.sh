@@ -4,7 +4,8 @@ GOOS_GOARCH='linux-amd64'
 
 rm -f gh-ac
 mkdir dist
-cargo build --release --target x86_64-unknown-linux-gnu
+# cargo build --release --target x86_64-unknown-linux-gnu
+RUSTFLAGS="-C target-feature=+crt-static" cargo build --target x86_64-unknown-linux-gnu --release
 # cp target/x86_64-unknown-linux-gnu/release/gh-ac gh-ac
 
 cp target/x86_64-unknown-linux-gnu/release/gh-ac dist/gh-ac_${tag_name}_$GOOS_GOARCH
