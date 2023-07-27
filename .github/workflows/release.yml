@@ -64,10 +64,14 @@ jobs:
       # - name: Build project
       #   run: cargo build --release
 
+      - run: ls -l
+
       - name: Compile project
         uses: cli/gh-extension-precompile@v1
         with:
           build_script_override: "script/build.sh"
+
+      - run: ls -l
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v4
