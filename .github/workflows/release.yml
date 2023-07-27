@@ -31,7 +31,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - run: sudo chmod ugo+rwX .
+      # - run: sudo chmod ugo+rwX .
 
       - uses: codfish/semantic-release-action@v2
         id: semantic_release
@@ -46,23 +46,20 @@ jobs:
           key: "package.version"
           value: ${{ steps.semantic_release.outputs.release-version }}
 
-      - run: ls -la
+      # - run: ls -la
 
-      - name: Build project
-        run: cargo build --release
+      # - name: Build project
+      #   run: cargo build --release
 
       - run: sudo chmod ugo+rwX .
 
-      - run: ls -la
+      - uses: cli/gh-extension-precompile@v1
+        with:
+          build_script_override: "script/build.sh"
 
-      # This has to be before gh-extension-precompile
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: "chore(AUTO): update app version [skip ci]"
           branch: master
           create_branch: false
-
-      - uses: cli/gh-extension-precompile@v1
-        with:
-          build_script_override: "script/build.sh"
