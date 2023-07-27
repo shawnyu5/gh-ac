@@ -5,6 +5,7 @@ Trigger Github action runs, and open the action run in the browser.
 <!-- vim-markdown-toc GFM -->
 
 - [Installation](#installation)
+- [Setup](#setup)
 - [Usage](#usage)
 - [Trouble shooting](#trouble-shooting)
   - [Expected workflow are not showing up when running push or force](#expected-workflow-are-not-showing-up-when-running-push-or-force)
@@ -18,7 +19,7 @@ Trigger Github action runs, and open the action run in the browser.
 gh extension install https://github.com/shawnyu5/gh-ac
 ```
 
-> **Note** Since rust binaries are dymically linked. Sometimes the precompiled binary will not work on your system. In the case, you must clone the repo and run `./script/build.sh && gh extension install .` to compile and install the extension locally. This requires rust to be installed on your system
+## Setup
 
 This extension uses the `$BROWSER` environment variable to determine the browser to use. Add the following to your `bashrc`
 
