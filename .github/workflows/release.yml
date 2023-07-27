@@ -19,11 +19,12 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
-    container: rust:1.71.0-bullseye
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
+
+      - run: sudo chmod ugo+rwX .
 
       - uses: codfish/semantic-release-action@v2
         id: semantic_release
