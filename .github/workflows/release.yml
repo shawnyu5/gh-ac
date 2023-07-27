@@ -8,6 +8,13 @@ on:
       - "src/**"
       - ".github/**"
 
+  pull_request:
+    branches:
+      - master
+    paths:
+      - "src/**"
+      - ".github/**"
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -38,6 +45,8 @@ jobs:
           file: "Cargo.toml"
           key: "package.version"
           value: ${{ steps.semantic_release.outputs.release-version }}
+
+      - run: ls -la
 
       - name: Build project
         run: cargo build --release
