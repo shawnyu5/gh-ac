@@ -51,6 +51,10 @@ jobs:
       - name: Build project
         run: cargo build --release
 
+      - run: sudo chmod ugo+rwX .
+
+      - run: ls -la
+
       # This has to be before gh-extension-precompile
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v4
