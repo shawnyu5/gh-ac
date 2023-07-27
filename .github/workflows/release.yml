@@ -35,10 +35,10 @@ jobs:
       # - run: ls -l
       # # - run: sudo chmod ugo+rwX .
 
-      # - uses: codfish/semantic-release-action@v2
-      #   id: semantic_release
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: codfish/semantic-release-action@v2
+        id: semantic_release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # - name: Install toml-cli
       #   run: |
@@ -57,8 +57,8 @@ jobs:
         with:
           file: "Cargo.toml"
           key: "package.version"
-          value: 1.2.3
-          # value: ${{ steps.semantic_release.outputs.release-version }}
+          # value: 1.2.3
+          value: ${{ steps.semantic_release.outputs.release-version }}
 
       # - run: sudo chmod ugo+rwX .
       # - run: ls -la
