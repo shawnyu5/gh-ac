@@ -8,30 +8,15 @@ on:
       - "src/**"
       - ".github/**"
 
-  pull_request:
-    branches:
-      - master
-    paths:
-      - "src/**"
-      - ".github/**"
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
-permissions:
-  contents: write
-  actions: write
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - run: sudo chmod ugo+rwX .
 
       - uses: codfish/semantic-release-action@v2
         id: semantic_release
@@ -46,19 +31,20 @@ jobs:
           key: "package.version"
           value: ${{ steps.semantic_release.outputs.release-version }}
 
-      - run: sudo chmod ugo+rwX .
-      - run: ls -la
-
-      - name: Build project
+      - name: Cargo build project
+        if: steps.semantic_release.outputs.new-release-published == 'true'
         run: cargo build --release
 
       - name: Commit changes
+        if: steps.semantic_release.outputs.new-release-published == 'true'
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: "chore(AUTO): update app version [skip ci]"
-          branch: master
+          branch: ${{ github.ref_name }}
           create_branch: false
 
-      - uses: cli/gh-extension-precompile@v1
+      - name: Upload artifact to Github releases
+        if: steps.semantic_release.outputs.new-release-published == 'true'
+        uses: cli/gh-extension-precompile@v1
         with:
           build_script_override: "script/build.sh"
