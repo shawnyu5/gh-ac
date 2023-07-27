@@ -67,12 +67,8 @@ jobs:
 
       - run: ls -l
 
-      - name: Compile project
-        uses: cli/gh-extension-precompile@v1
-        with:
-          build_script_override: "script/build.sh"
-
-      - run: ls -l
+      - name: Cargo build project
+        run: cargo build --release
 
       - name: Commit changes
         run: |
@@ -81,6 +77,13 @@ jobs:
           git add Cargo.* package.json
           git commit -m "chore(AUTO): update app version [skip ci]"
           git push origin ${{ github.ref_name }}
+
+      - name: Compile project
+        uses: cli/gh-extension-precompile@v1
+        with:
+          build_script_override: "script/build.sh"
+
+      - run: ls -l
 
       # - name: Commit changes
       #   uses: stefanzweifel/git-auto-commit-action@v4
