@@ -55,6 +55,7 @@ struct ForceArgs {
     #[arg(long, action = clap::ArgAction::SetTrue)]
     url: Option<bool>,
 }
+
 #[derive(Args)]
 struct DispatchArgs {
     /// case insensitive name of the workflow to look for

@@ -76,7 +76,9 @@ jobs:
 
       - name: Commit changes
         run: |
-          git add Cargo.*
+          git config user.name "github-actions[bot]"
+          git config user.email "noreply@github.action.com"
+          git add Cargo.* package.json
           git commit -m "chore(AUTO): update app version [skip ci]"
           git push origin ${{ github.ref_name }}
 
