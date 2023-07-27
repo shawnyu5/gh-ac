@@ -52,6 +52,7 @@ jobs:
           ./toml set Cargo.toml package.version "12345" | tee Cargo.toml
 
       # - name: Update version in Cargo.toml
+
       #   if: steps.semantic_release.outputs.new-release-published == 'true'
       #   uses: ciiiii/toml-editor@1.0.0
       #   with:
