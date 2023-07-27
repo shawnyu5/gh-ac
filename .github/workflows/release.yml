@@ -8,13 +8,6 @@ on:
       - "src/**"
       - ".github/**"
 
-  pull_request:
-    branches:
-      - master
-    paths:
-      - "src/**"
-      - ".github/**"
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
