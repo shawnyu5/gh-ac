@@ -180,34 +180,25 @@ impl Gh {
     /// get all workflows of a repo
     ///
     /// returns all active workflows of a repo
-    pub fn repo_workflows(&self) -> Result<Workflows> {
-        let args = self.construct_gh_api_args(&mut vec!["/repos/{owner}/{repo}/actions/workflows"]);
+    pub fn repo_workflows(&mut self) -> Result<Workflows> {
+        // let args = self.construct_gh_api_args(&mut vec!["/repos/{owner}/{repo}/actions/workflows"]);
+        self.set_gh_api_args(&mut vec![
+            "/repos/{owner}/{repo}/actions/workflows".to_string()
+        ]);
 
-        trace!(
-            "gh api /repos/{{owner}}/{{repo}}/actions/workflows: {:?}",
-            args
-        );
+        match self.execute::<Workflows>() {
+            Ok(mut workflows) => {
+                workflows.workflows = workflows
+                    .workflows
+                    .into_iter()
+                    .filter(|e| e.state.clone().unwrap_or("".to_string()) == "active")
+                    .collect();
 
-        let output = Command::new("gh")
-            .args(&args)
-            .output()
-            .expect("to get workflow runs from `gh`");
-
-        if output.status.success() {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            let mut workflows = serde_json::from_str::<Workflows>(&stdout)?;
-            workflows.workflows = workflows
-                .workflows
-                .into_iter()
-                .filter(|e| e.state.clone().unwrap_or("".to_string()) == "active")
-                .collect();
-
-            // update total count after filtering
-            workflows.total_count = workflows.workflows.len();
-            return Ok(workflows);
-        } else {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(anyhow!("failed getting repo workflows...: {}", stderr));
+                // update total count after filtering
+                workflows.total_count = workflows.workflows.len();
+                return Ok(workflows);
+            }
+            Err(e) => return Err(anyhow!(e)),
         }
     }
 
@@ -250,7 +241,7 @@ impl Gh {
 
             if old_workflow_run == &current_workflow_run {
                 info!("no workflow run has started...");
-                info!("waiting for 3 seconds");
+                info!("waiting for 3 seconds before making api request");
                 std::thread::sleep(std::time::Duration::from_secs(3));
                 continue;
             }
@@ -286,7 +277,7 @@ impl Gh {
     /// prompt: The prompt to display to the user. Defaults to `Select a workflow`
     ///
     /// returns the user selected workflow object
-    pub fn select_workflow(&self, prompt: Option<&str>) -> Workflow {
+    pub fn select_workflow(&mut self, prompt: Option<&str>) -> Workflow {
         let workflows = self.repo_workflows().unwrap_or_default();
         trace!("workflows: {:?}", workflows);
 
