@@ -205,20 +205,16 @@ impl Gh {
     /// list workflow runs for a workflow
     ///
     /// * `workflow_id`: the id of the workflow to get workflow runs for
-    pub fn list_workflow_runs_for_workflow(&self, workflow_id: &i64) -> Result<SingleWorkflowRuns> {
-        let url =
+    pub fn list_workflow_runs_for_workflow(
+        &mut self,
+        workflow_id: &i64,
+    ) -> Result<SingleWorkflowRuns> {
+        let args =
             format!("/repos/{{owner}}/{{repo}}/actions/workflows/{workflow_id}/runs?per_page=500");
-        let args = self.construct_gh_api_args(&mut vec![url.as_str()]);
-        trace!("gh api {}: {:?}", url, args);
-
-        let output = Command::new("gh").args(&args).output()?;
-
-        if output.status.success() {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            return Ok(serde_json::from_str::<SingleWorkflowRuns>(&stdout).unwrap());
-        } else {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(anyhow!("failed getting workflow runs...: {}", stderr));
+        self.set_gh_api_args(&mut vec![args]);
+        match self.execute::<SingleWorkflowRuns>() {
+            Ok(w) => Ok(w),
+            Err(e) => Err(anyhow!(e)),
         }
     }
 
@@ -346,12 +342,13 @@ impl Gh {
     /// delete a specific run of a workflow
     ///
     /// * `run_id`: the workflow run id to delete
-    pub fn delete_workflow_run(&self, run_id: i64) -> Result<()> {
+    pub fn delete_workflow_run(&mut self, run_id: i64) -> Result<()> {
         let url = format!("/repos/{{owner}}/{{repo}}/actions/runs/{}", run_id);
         let args = self.construct_gh_api_args(&mut vec![url.as_str(), "--method", "DELETE"]);
+        // self.set_gh_api_args(&mut vec![url, "--method".to_string(), "DELETE".to_string()]);
         debug!("Deleting workfow run: {}", run_id);
-        debug!("Gh args: {:?}", args);
 
+        // return self.execute::<()>();
         let output = Command::new("gh").args(args).output()?;
 
         if output.status.success() {
