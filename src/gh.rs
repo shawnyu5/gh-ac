@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use dialoguer::{console::Term, theme::ColorfulTheme, FuzzySelect};
 use log::{debug, error, info, trace};
+use serde::de::DeserializeOwned;
 use serde_derive::{Deserialize, Serialize};
 use spinners::{Spinner, Spinners};
 use std::{
@@ -15,6 +16,8 @@ pub struct Gh {
     hostname: Option<String>,
     /// if the custom hostname should be used in this repo
     should_use_custom_hostname: bool,
+    /// args to pass to `gh`
+    args: Vec<String>,
 }
 
 impl Default for Gh {
@@ -22,6 +25,7 @@ impl Default for Gh {
         Self {
             hostname: Default::default(),
             should_use_custom_hostname: false,
+            args: Default::default(),
         }
     }
 }
@@ -63,6 +67,10 @@ impl Gh {
     /// * `args`: the args to pass to `gh api <args>`
     ///
     /// returns the args to pass to `gh api <args>`
+    #[deprecated(
+        since = "3.5.14",
+        note = "use `set_gh_api_args` instead. gh api args are now handled internally"
+    )]
     fn construct_gh_api_args<'a>(&'a self, args: &mut Vec<&'a str>) -> Vec<&'a str> {
         if self.should_use_custom_hostname {
             match &self.hostname {
@@ -84,37 +92,88 @@ impl Gh {
             return gh_args;
         };
     }
+
+    /// get the arguments to pass to `gh`. Will handle appending `--hostname <hostname>` if applicable
+    ///
+    /// * `args`: args to `gh`
+    fn set_gh_api_args(&mut self, args: &mut Vec<String>) -> &mut Gh {
+        if self.should_use_custom_hostname {
+            match &self.hostname {
+                Some(hostname) => {
+                    debug!("appending custom hostname to gh command");
+                    let mut gh_args = vec![
+                        "api".to_string(),
+                        "--hostname".to_string(),
+                        hostname.to_string(),
+                    ];
+                    gh_args.append(args);
+                    self.args = gh_args;
+                    debug!("gh args set: {:?}", &self.args)
+                }
+                None => {
+                    error!(
+                        "no hostname specified. Add a hostname using `config --hostname <HOSTNAME>"
+                    );
+                    process::exit(1);
+                }
+            }
+        } else {
+            let mut gh_args = vec!["api".to_string()];
+            gh_args.append(args);
+            self.args = gh_args;
+        }
+        return self;
+    }
+
+    /// execute the gh command, and return the result serialized into json
+    fn execute<T>(&self) -> Result<T>
+    where
+        T: DeserializeOwned,
+    {
+        debug!("executing gh command");
+        debug!("gh args: {:?}", &self.args);
+        let output = Command::new("gh")
+            .args(&self.args)
+            .output()
+            .expect("gh command to work");
+
+        if output.status.success() {
+            let json = match serde_json::from_slice::<T>(&output.stdout) {
+                Ok(json) => json,
+                Err(e) => return Err(anyhow!(e.to_string())),
+            };
+            return Ok(json);
+        } else {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            error!("gh {:?} failed: {}", &self.args, stderr);
+            return Err(anyhow!("gh {:?} failed: {}", &self.args, stderr));
+        }
+    }
     /// get the latest workflow run for a workflow by id
     /// `id`: workflow id to search for
     ///
     /// returns the latest workflow run for a workflow with `id`
-    pub fn get_workflow_run_by_name(&self, name: &String) -> Result<WorkflowRun> {
-        let args = self.construct_gh_api_args(&mut vec!["/repos/{owner}/{repo}/actions/runs"]);
+    pub fn get_workflow_run_by_name(&mut self, name: &String) -> Result<WorkflowRun> {
+        // let args = self.construct_gh_api_args(&mut vec!["/repos/{owner}/{repo}/actions/runs"]);
+        self.set_gh_api_args(&mut vec!["/repos/{owner}/{repo}/actions/runs".to_string()]);
 
-        let output = Command::new("gh")
-            .args(&args)
-            .output()
-            .expect("to get workflow runs from `gh`");
-        trace!(
-            "gh api /repos/{{owner}}/{{repo}}/actions/runs: {:?}",
-            output
-        );
-
-        if output.status.success() {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            let workflow_runs = serde_json::from_str::<WorkflowRuns>(&stdout)?;
-
-            for r in workflow_runs.workflow_runs.unwrap() {
-                if &r.name.to_lowercase() == &name.to_lowercase() {
-                    return Ok(r);
+        match self.execute::<WorkflowRuns>() {
+            Ok(workflow_runs) => {
+                for r in &workflow_runs.workflow_runs.unwrap() {
+                    if &r.name.to_lowercase() == &name.to_lowercase() {
+                        return Ok(r.clone());
+                    }
                 }
+                return Err(anyhow!("No workflow with name {} found...", name));
             }
-            return Err(anyhow!("No workflow with name {} found...", name));
-        } else {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            // if there was no hostname passed in, retry with a hostname
-            println!("Command failed with error: {}", stderr);
-            return Err(anyhow!("failed getting actions run..."));
+            Err(e) => {
+                error!(
+                    "Failed to get workflow run with name {}: {}",
+                    name,
+                    &e.to_string()
+                );
+                return Err(anyhow!(e));
+            }
         }
     }
 
@@ -176,7 +235,7 @@ impl Gh {
     ///
     /// * `old_workflow_run`: the last workflow run that was observed in the repo
     pub fn check_for_new_workflow_run_by_id(
-        &self,
+        &mut self,
         old_workflow_run: &WorkflowRun,
         print_url: &bool,
     ) {
