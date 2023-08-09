@@ -95,7 +95,7 @@ struct Config {
 fn main() {
     // CLI config values
     let config: Config = confy::load("gh-ac", None).unwrap();
-    let gh = Gh::new(config.hostname);
+    let mut gh = Gh::new(config.hostname);
     let cli = Cli::parse();
 
     match cli.verbosity {
@@ -139,7 +139,7 @@ fn main() {
             };
             track_new_workflow(
                 action,
-                &gh,
+                &mut gh,
                 selected_workflow_name,
                 args.url.unwrap_or(false),
             );
@@ -171,7 +171,7 @@ fn main() {
 
             track_new_workflow(
                 action,
-                &gh,
+                &mut gh,
                 selected_workflow_name,
                 args.url.unwrap_or(false),
             );
@@ -185,22 +185,26 @@ fn main() {
                 }
             };
 
-            let handler = |selected_workflow_name: &String| {
-                match gh.dispatch_workflow_run(
-                    args.reference.unwrap_or_else(|| git::current_branch_name()),
-                    &selected_workflow_name,
-                    &args.body,
-                ) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        error!("Failed to dispatch workflow: {}", e.to_string());
-                        process::exit(1);
-                    }
-                };
+            let handler = {
+                let gh = gh.clone();
+                move |selected_workflow_name: &String| {
+                    match gh.dispatch_workflow_run(
+                        args.reference.unwrap_or_else(|| git::current_branch_name()),
+                        &selected_workflow_name,
+                        &args.body,
+                    ) {
+                        Ok(_) => {}
+                        Err(e) => {
+                            error!("Failed to dispatch workflow: {}", e.to_string());
+                            process::exit(1);
+                        }
+                    };
+                }
             };
+
             track_new_workflow(
                 handler,
-                &gh,
+                &mut gh,
                 selected_workflow_name,
                 args.url.unwrap_or(false),
             );
@@ -282,14 +286,18 @@ fn main() {
 /// * `gh`: the Gh instance
 /// * `workflow_name`: the workflow to look for
 /// * `print_url`: if the url to the workflow should be printed out instead of opened in the browser
-fn track_new_workflow<F>(trigger_workflow_run: F, gh: &Gh, workflow_name: String, print_url: bool)
-where
+fn track_new_workflow<F>(
+    trigger_workflow_run: F,
+    gh: &mut Gh,
+    workflow_name: String,
+    print_url: bool,
+) where
     F: FnOnce(&String),
 {
     let (sender, receiver) = mpsc::channel();
 
     {
-        let gh = gh.clone();
+        let mut gh = gh.clone();
         let selected_workflow_name = workflow_name.clone();
         thread::spawn(move || {
             let initial_workflow_run = match gh.get_workflow_run_by_name(&selected_workflow_name) {

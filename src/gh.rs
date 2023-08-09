@@ -1,13 +1,16 @@
 use anyhow::{anyhow, Result};
 use dialoguer::{console::Term, theme::ColorfulTheme, FuzzySelect};
 use log::{debug, error, info, trace};
+use serde::de::DeserializeOwned;
 use serde_derive::{Deserialize, Serialize};
 use spinners::{Spinner, Spinners};
 use std::{
+    any::type_name,
     env,
     fmt::Display,
     process::{self, Command},
 };
+use url::form_urlencoded;
 
 #[derive(Debug, Clone)]
 pub struct Gh {
@@ -15,6 +18,8 @@ pub struct Gh {
     hostname: Option<String>,
     /// if the custom hostname should be used in this repo
     should_use_custom_hostname: bool,
+    /// args to pass to `gh`
+    args: Vec<String>,
 }
 
 impl Default for Gh {
@@ -22,6 +27,7 @@ impl Default for Gh {
         Self {
             hostname: Default::default(),
             should_use_custom_hostname: false,
+            args: Default::default(),
         }
     }
 }
@@ -31,6 +37,9 @@ impl Display for Workflow {
     }
 }
 impl Gh {
+    /// construct a new instance of Gh. Also checks if a custom hostname is needed
+    ///
+    /// * `hostname`: a custom hostname to use
     pub fn new(hostname: Option<String>) -> Gh {
         let mut gh = Gh {
             hostname,
@@ -63,6 +72,10 @@ impl Gh {
     /// * `args`: the args to pass to `gh api <args>`
     ///
     /// returns the args to pass to `gh api <args>`
+    #[deprecated(
+        since = "3.5.14",
+        note = "use `set_gh_api_args` instead. gh api args are now handled internally"
+    )]
     fn construct_gh_api_args<'a>(&'a self, args: &mut Vec<&'a str>) -> Vec<&'a str> {
         if self.should_use_custom_hostname {
             match &self.hostname {
@@ -84,99 +97,165 @@ impl Gh {
             return gh_args;
         };
     }
+
+    /// get the arguments to pass to `gh`. Will handle appending `--hostname <hostname>` if applicable
+    ///
+    /// * `args`: args to `gh`
+    fn set_gh_api_args(&mut self, args: &mut Vec<String>) -> &mut Gh {
+        if self.should_use_custom_hostname {
+            match &self.hostname {
+                Some(hostname) => {
+                    debug!("appending custom hostname to gh command");
+                    let mut gh_args = vec![
+                        "api".to_string(),
+                        "--hostname".to_string(),
+                        hostname.to_string(),
+                    ];
+                    gh_args.append(args);
+                    self.args = gh_args;
+                    debug!("gh args set: {:?}", &self.args)
+                }
+                None => {
+                    error!(
+                        "no hostname specified. Add a hostname using `config --hostname <HOSTNAME>"
+                    );
+                    process::exit(1);
+                }
+            }
+        } else {
+            let mut gh_args = vec!["api".to_string()];
+            gh_args.append(args);
+            self.args = gh_args;
+        }
+        return self;
+    }
+
+    /// execute the gh command, and return the result serialized into json
+    fn execute<T>(&self) -> Result<T>
+    where
+        // TODO: make sure adding default here dont break stuff
+        T: DeserializeOwned + Default,
+    {
+        debug!("executing gh command");
+        debug!("gh args: {:?}", &self.args);
+        let output = Command::new("gh")
+            .args(&self.args)
+            .output()
+            .expect("gh command to work");
+
+        if output.status.success() {
+            if type_name::<T>() == "()" {
+                return Ok(T::default());
+            }
+
+            let json = match serde_json::from_slice::<T>(&output.stdout) {
+                Ok(json) => json,
+                Err(e) => return Err(anyhow!(e.to_string())),
+            };
+            return Ok(json);
+        } else {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            error!("gh {:?} failed: {}", &self.args, stderr);
+            return Err(anyhow!("gh {:?} failed: {}", &self.args, stderr));
+        }
+    }
     /// get the latest workflow run for a workflow by id
     /// `id`: workflow id to search for
     ///
     /// returns the latest workflow run for a workflow with `id`
-    pub fn get_workflow_run_by_name(&self, name: &String) -> Result<WorkflowRun> {
-        let args = self.construct_gh_api_args(&mut vec!["/repos/{owner}/{repo}/actions/runs"]);
+    pub fn get_workflow_run_by_name(&mut self, name: &String) -> Result<WorkflowRun> {
+        // let args = self.construct_gh_api_args(&mut vec!["/repos/{owner}/{repo}/actions/runs"]);
+        self.set_gh_api_args(&mut vec!["/repos/{owner}/{repo}/actions/runs".to_string()]);
 
-        let output = Command::new("gh")
-            .args(&args)
-            .output()
-            .expect("to get workflow runs from `gh`");
-        trace!(
-            "gh api /repos/{{owner}}/{{repo}}/actions/runs: {:?}",
-            output
-        );
-
-        if output.status.success() {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            let workflow_runs = serde_json::from_str::<WorkflowRuns>(&stdout)?;
-
-            for r in workflow_runs.workflow_runs.unwrap() {
-                if &r.name.to_lowercase() == &name.to_lowercase() {
-                    return Ok(r);
+        match self.execute::<WorkflowRuns>() {
+            Ok(workflow_runs) => {
+                for r in &workflow_runs.workflow_runs.unwrap() {
+                    if &r.name.to_lowercase() == &name.to_lowercase() {
+                        return Ok(r.clone());
+                    }
                 }
+                return Err(anyhow!("No workflow with name {} found...", name));
             }
-            return Err(anyhow!("No workflow with name {} found...", name));
-        } else {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            // if there was no hostname passed in, retry with a hostname
-            println!("Command failed with error: {}", stderr);
-            return Err(anyhow!("failed getting actions run..."));
+            Err(e) => {
+                error!(
+                    "Failed to get workflow run with name {}: {}",
+                    name,
+                    &e.to_string()
+                );
+                return Err(anyhow!(e));
+            }
         }
     }
 
     /// get all workflows of a repo
     ///
     /// returns all active workflows of a repo
-    pub fn repo_workflows(&self) -> Result<Workflows> {
-        let args = self.construct_gh_api_args(&mut vec!["/repos/{owner}/{repo}/actions/workflows"]);
+    pub fn repo_workflows(&mut self) -> Result<Workflows> {
+        // let args = self.construct_gh_api_args(&mut vec!["/repos/{owner}/{repo}/actions/workflows"]);
+        self.set_gh_api_args(&mut vec![
+            "/repos/{owner}/{repo}/actions/workflows".to_string()
+        ]);
 
-        trace!(
-            "gh api /repos/{{owner}}/{{repo}}/actions/workflows: {:?}",
-            args
-        );
+        match self.execute::<Workflows>() {
+            Ok(mut workflows) => {
+                workflows.workflows = workflows
+                    .workflows
+                    .into_iter()
+                    .filter(|e| e.state.clone().unwrap_or("".to_string()) == "active")
+                    .collect();
 
-        let output = Command::new("gh")
-            .args(&args)
-            .output()
-            .expect("to get workflow runs from `gh`");
-
-        if output.status.success() {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            let mut workflows = serde_json::from_str::<Workflows>(&stdout)?;
-            workflows.workflows = workflows
-                .workflows
-                .into_iter()
-                .filter(|e| e.state.clone().unwrap_or("".to_string()) == "active")
-                .collect();
-
-            // update total count after filtering
-            workflows.total_count = workflows.workflows.len();
-            return Ok(workflows);
-        } else {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(anyhow!("failed getting repo workflows...: {}", stderr));
+                // update total count after filtering
+                workflows.total_count = workflows.workflows.len();
+                return Ok(workflows);
+            }
+            Err(e) => return Err(anyhow!(e)),
         }
     }
 
     /// list workflow runs for a workflow
     ///
     /// * `workflow_id`: the id of the workflow to get workflow runs for
-    pub fn list_workflow_runs_for_workflow(&self, workflow_id: &i64) -> Result<SingleWorkflowRuns> {
-        let url =
-            format!("/repos/{{owner}}/{{repo}}/actions/workflows/{workflow_id}/runs?per_page=500");
-        let args = self.construct_gh_api_args(&mut vec![url.as_str()]);
-        trace!("gh api {}: {:?}", url, args);
+    pub fn list_workflow_runs_for_workflow(
+        &mut self,
+        workflow_id: &i64,
+    ) -> Result<SingleWorkflowRuns> {
+        let mut page = 1;
+        let query_string = form_urlencoded::Serializer::new(String::new())
+            .append_pair("per_page", "100")
+            .append_pair("page", &page.to_string())
+            .finish();
+        debug!("query string: {}", &query_string);
 
-        let output = Command::new("gh").args(&args).output()?;
-
-        if output.status.success() {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            return Ok(serde_json::from_str::<SingleWorkflowRuns>(&stdout).unwrap());
-        } else {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(anyhow!("failed getting workflow runs...: {}", stderr));
+        let args = format!(
+            "/repos/{{owner}}/{{repo}}/actions/workflows/{workflow_id}/runs?{}",
+            query_string
+        );
+        debug!("args: {}", &args);
+        self.set_gh_api_args(&mut vec![args]);
+        let mut workflow_runs: SingleWorkflowRuns = SingleWorkflowRuns::default();
+        loop {
+            let runs = match self.execute::<SingleWorkflowRuns>() {
+                Ok(mut w) => {
+                    workflow_runs.workflow_runs.append(&mut w.workflow_runs);
+                    workflow_runs.total_count = w.workflow_runs.len();
+                    Ok(&workflow_runs)
+                }
+                Err(e) => Err(anyhow!(e)),
+            }?;
+            // when we have collected all runs, break
+            if runs.total_count == workflow_runs.workflow_runs.len() {
+                break;
+            }
+            page = page + 1;
         }
+        return Ok(workflow_runs);
     }
 
     /// check for a new workflow run with an id new workflow runs
     ///
     /// * `old_workflow_run`: the last workflow run that was observed in the repo
     pub fn check_for_new_workflow_run_by_id(
-        &self,
+        &mut self,
         old_workflow_run: &WorkflowRun,
         print_url: &bool,
     ) {
@@ -191,7 +270,7 @@ impl Gh {
 
             if old_workflow_run == &current_workflow_run {
                 info!("no workflow run has started...");
-                info!("waiting for 3 seconds");
+                info!("waiting for 3 seconds before making api request");
                 std::thread::sleep(std::time::Duration::from_secs(3));
                 continue;
             }
@@ -227,7 +306,7 @@ impl Gh {
     /// prompt: The prompt to display to the user. Defaults to `Select a workflow`
     ///
     /// returns the user selected workflow object
-    pub fn select_workflow(&self, prompt: Option<&str>) -> Workflow {
+    pub fn select_workflow(&mut self, prompt: Option<&str>) -> Workflow {
         let workflows = self.repo_workflows().unwrap_or_default();
         trace!("workflows: {:?}", workflows);
 
@@ -296,12 +375,14 @@ impl Gh {
     /// delete a specific run of a workflow
     ///
     /// * `run_id`: the workflow run id to delete
-    pub fn delete_workflow_run(&self, run_id: i64) -> Result<()> {
+    pub fn delete_workflow_run(&mut self, run_id: i64) -> Result<()> {
         let url = format!("/repos/{{owner}}/{{repo}}/actions/runs/{}", run_id);
         let args = self.construct_gh_api_args(&mut vec![url.as_str(), "--method", "DELETE"]);
+        // self.set_gh_api_args(&mut vec![url, "--method".to_string(), "DELETE".to_string()]);
         debug!("Deleting workfow run: {}", run_id);
-        debug!("Gh args: {:?}", args);
 
+        // TODO: make sure this works
+        return self.execute::<()>();
         let output = Command::new("gh").args(args).output()?;
 
         if output.status.success() {
