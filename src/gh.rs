@@ -72,10 +72,7 @@ impl Gh {
     /// * `args`: the args to pass to `gh api <args>`
     ///
     /// returns the args to pass to `gh api <args>`
-    #[deprecated(
-        since = "3.5.14",
-        note = "use `set_gh_api_args` instead. gh api args are now handled internally"
-    )]
+    #[deprecated(note = "use `set_gh_api_args` instead. gh api args are now handled internally")]
     fn construct_gh_api_args<'a>(&'a self, args: &mut Vec<&'a str>) -> Vec<&'a str> {
         if self.should_use_custom_hostname {
             match &self.hostname {
@@ -130,6 +127,14 @@ impl Gh {
         return self;
     }
 
+    /// set args to pass to `gh`
+    ///
+    /// * `args`: argument to pass to `gh`
+    fn set_gh_args(&mut self, args: &mut Vec<String>) -> &mut Gh {
+        self.args.append(args);
+        return self;
+    }
+
     /// execute the gh command, and return the result serialized into json
     fn execute<T>(&self) -> Result<T>
     where
@@ -159,6 +164,22 @@ impl Gh {
             return Err(anyhow!("gh {:?} failed: {}", &self.args, stderr));
         }
     }
+    /// get the PAT gh is using
+    pub fn get_pat_token() -> Result<String> {
+        let output = Command::new("gh")
+            .arg("auto")
+            .arg("token")
+            .output()
+            .unwrap();
+
+        if output.status.success() {
+            return Ok(String::from_utf8_lossy(&output.stdout).to_string());
+        } else {
+            return Err(anyhow!("failed to get PAT token"));
+        }
+    }
+
+    #[deprecated(note = "use Github.get_workflow_run_by_name() instead")]
     /// get the latest workflow run for a workflow by id
     /// `id`: workflow id to search for
     ///

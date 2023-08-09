@@ -1,5 +1,6 @@
 mod gh;
 mod git;
+mod github;
 use std::sync::mpsc;
 use std::{process, thread};
 
