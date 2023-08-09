@@ -5,10 +5,12 @@ use serde::de::DeserializeOwned;
 use serde_derive::{Deserialize, Serialize};
 use spinners::{Spinner, Spinners};
 use std::{
+    any::type_name,
     env,
     fmt::Display,
     process::{self, Command},
 };
+use url::form_urlencoded;
 
 #[derive(Debug, Clone)]
 pub struct Gh {
@@ -35,6 +37,9 @@ impl Display for Workflow {
     }
 }
 impl Gh {
+    /// construct a new instance of Gh. Also checks if a custom hostname is needed
+    ///
+    /// * `hostname`: a custom hostname to use
     pub fn new(hostname: Option<String>) -> Gh {
         let mut gh = Gh {
             hostname,
@@ -128,7 +133,8 @@ impl Gh {
     /// execute the gh command, and return the result serialized into json
     fn execute<T>(&self) -> Result<T>
     where
-        T: DeserializeOwned,
+        // TODO: make sure adding default here dont break stuff
+        T: DeserializeOwned + Default,
     {
         debug!("executing gh command");
         debug!("gh args: {:?}", &self.args);
@@ -138,6 +144,10 @@ impl Gh {
             .expect("gh command to work");
 
         if output.status.success() {
+            if type_name::<T>() == "()" {
+                return Ok(T::default());
+            }
+
             let json = match serde_json::from_slice::<T>(&output.stdout) {
                 Ok(json) => json,
                 Err(e) => return Err(anyhow!(e.to_string())),
@@ -209,13 +219,36 @@ impl Gh {
         &mut self,
         workflow_id: &i64,
     ) -> Result<SingleWorkflowRuns> {
-        let args =
-            format!("/repos/{{owner}}/{{repo}}/actions/workflows/{workflow_id}/runs?per_page=500");
+        let mut page = 1;
+        let query_string = form_urlencoded::Serializer::new(String::new())
+            .append_pair("per_page", "100")
+            .append_pair("page", &page.to_string())
+            .finish();
+        debug!("query string: {}", &query_string);
+
+        let args = format!(
+            "/repos/{{owner}}/{{repo}}/actions/workflows/{workflow_id}/runs?{}",
+            query_string
+        );
+        debug!("args: {}", &args);
         self.set_gh_api_args(&mut vec![args]);
-        match self.execute::<SingleWorkflowRuns>() {
-            Ok(w) => Ok(w),
-            Err(e) => Err(anyhow!(e)),
+        let mut workflow_runs: SingleWorkflowRuns = SingleWorkflowRuns::default();
+        loop {
+            let runs = match self.execute::<SingleWorkflowRuns>() {
+                Ok(mut w) => {
+                    workflow_runs.workflow_runs.append(&mut w.workflow_runs);
+                    workflow_runs.total_count = w.workflow_runs.len();
+                    Ok(&workflow_runs)
+                }
+                Err(e) => Err(anyhow!(e)),
+            }?;
+            // when we have collected all runs, break
+            if runs.total_count == workflow_runs.workflow_runs.len() {
+                break;
+            }
+            page = page + 1;
         }
+        return Ok(workflow_runs);
     }
 
     /// check for a new workflow run with an id new workflow runs
@@ -348,7 +381,8 @@ impl Gh {
         // self.set_gh_api_args(&mut vec![url, "--method".to_string(), "DELETE".to_string()]);
         debug!("Deleting workfow run: {}", run_id);
 
-        // return self.execute::<()>();
+        // TODO: make sure this works
+        return self.execute::<()>();
         let output = Command::new("gh").args(args).output()?;
 
         if output.status.success() {
