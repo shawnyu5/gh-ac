@@ -6,6 +6,7 @@ use serde_derive::{Deserialize, Serialize};
 use spinners::{Spinner, Spinners};
 use std::{
     any::type_name,
+    collections::HashMap,
     env,
     fmt::Display,
     process::{self, Command},
@@ -20,6 +21,8 @@ pub struct Gh {
     should_use_custom_hostname: bool,
     /// args to pass to `gh`
     args: Vec<String>,
+    /// optional query params to pass to `gh api` command
+    query_params: Option<HashMap<String, String>>,
 }
 
 impl Default for Gh {
@@ -28,6 +31,7 @@ impl Default for Gh {
             hostname: Default::default(),
             should_use_custom_hostname: false,
             args: Default::default(),
+            query_params: Default::default(),
         }
     }
 }
@@ -40,7 +44,7 @@ impl Gh {
     /// construct a new instance of Gh. Also checks if a custom hostname is needed
     ///
     /// * `hostname`: a custom hostname to use
-    pub fn new(hostname: Option<String>) -> Gh {
+    pub fn new(hostname: Option<String>) -> Self {
         let mut gh = Gh {
             hostname,
             ..Default::default()
@@ -130,10 +134,28 @@ impl Gh {
         return self;
     }
 
+    /// Set the number of results to return per page
+    ///
+    /// * `per_page`: the number of results to return per page. Max 100
+    fn per_page(&mut self, per_page: u32) -> &mut Self {
+        let query_params = self.query_params.get_or_insert(HashMap::new());
+        query_params.insert("per_page".to_string(), per_page.to_string());
+        return self;
+    }
+
+    /// Set the page number to return
+    ///
+    /// * `page`: page number to return
+    fn page(&mut self, page: u32) -> &mut Self {
+        let query_params = self.query_params.get_or_insert(HashMap::new());
+        query_params.insert("page".to_string(), page.to_string());
+        return self;
+    }
     /// execute the gh command, and return the result serialized into json
+    ///
+    /// * `T`: the type to deserialize the json into. If `T` is `()`, then the json will not be deserialized, the command will instead be executed, and `T::default()` will be returned
     fn execute<T>(&self) -> Result<T>
     where
-        // TODO: make sure adding default here dont break stuff
         T: DeserializeOwned + Default,
     {
         debug!("executing gh command");
@@ -159,10 +181,10 @@ impl Gh {
             return Err(anyhow!("gh {:?} failed: {}", &self.args, stderr));
         }
     }
-    /// get the latest workflow run for a workflow by id
-    /// `id`: workflow id to search for
+    /// get the latest workflow run for a workflow by name
+    /// `name`: workflow name to search for
     ///
-    /// returns the latest workflow run for a workflow with `id`
+    /// returns the latest workflow run for a workflow with `name`
     pub fn get_workflow_run_by_name(&mut self, name: &String) -> Result<WorkflowRun> {
         // let args = self.construct_gh_api_args(&mut vec!["/repos/{owner}/{repo}/actions/runs"]);
         self.set_gh_api_args(&mut vec!["/repos/{owner}/{repo}/actions/runs".to_string()]);
