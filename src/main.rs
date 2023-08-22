@@ -210,6 +210,8 @@ fn main() {
             );
         }
         Commands::Cleanup(args) => {
+            gh.per_page(100);
+            gh.page(1);
             let workflows = match gh.repo_workflows() {
                 Ok(workflows) => workflows,
                 Err(e) => {
@@ -232,7 +234,7 @@ fn main() {
                 }
             };
 
-            debug!("Unused workflows: {:?}", unused_worflows);
+            debug!("Unused workflows to be deleted: {:?}", unused_worflows);
             if unused_worflows.is_empty() {
                 println!("No unused workflows found");
                 process::exit(0);
@@ -251,6 +253,7 @@ fn main() {
                 }
                 let mut spinner =
                     Spinner::with_timer(Spinners::Flip, format!("Deleting workflow {}...", w.name));
+
                 let workflow_runs = gh.list_workflow_runs_for_workflow(&w.id).unwrap();
                 debug!("Workflow runs count: {:?}", workflow_runs.total_count);
                 debug!(

@@ -137,7 +137,7 @@ impl Gh {
     /// Set the number of results to return per page
     ///
     /// * `per_page`: the number of results to return per page. Max 100
-    fn per_page(&mut self, per_page: u32) -> &mut Self {
+    pub fn per_page(&mut self, per_page: u32) -> &mut Self {
         let query_params = self.query_params.get_or_insert(HashMap::new());
         query_params.insert("per_page".to_string(), per_page.to_string());
         return self;
@@ -146,7 +146,7 @@ impl Gh {
     /// Set the page number to return
     ///
     /// * `page`: page number to return
-    fn page(&mut self, page: u32) -> &mut Self {
+    pub fn page(&mut self, page: u32) -> &mut Self {
         let query_params = self.query_params.get_or_insert(HashMap::new());
         query_params.insert("page".to_string(), page.to_string());
         return self;
@@ -154,14 +154,39 @@ impl Gh {
     /// execute the gh command, and return the result serialized into json
     ///
     /// * `T`: the type to deserialize the json into. If `T` is `()`, then the json will not be deserialized, the command will instead be executed, and `T::default()` will be returned
-    fn execute<T>(&self) -> Result<T>
+    fn execute<T>(&mut self) -> Result<T>
     where
         T: DeserializeOwned + Default,
     {
         debug!("executing gh command");
-        debug!("gh args: {:?}", &self.args);
+
+        let args: Vec<String> = {
+            // if there are query params, remove the url, append the query params and add it back
+            if let Some(query_params) = &self.query_params {
+                // parse query params from the hashmap to a string
+                let query_params = form_urlencoded::Serializer::new(String::new())
+                    .extend_pairs(query_params.iter())
+                    .finish();
+
+                let mut args = self.args.clone();
+
+                // the api url will always be the last element in the vector
+                let mut url = self.args.last().expect("url to exist").clone();
+                url.push_str("?");
+                url.push_str(&query_params);
+
+                args.pop();
+                args.push(url.clone());
+                args
+            } else {
+                self.args.clone()
+            }
+        };
+        debug!("gh execute args: {:?}", &args);
+        debug!("self.args: {:?}", &self.args);
+
         let output = Command::new("gh")
-            .args(&self.args)
+            .args(&args)
             .output()
             .expect("gh command to work");
 
@@ -209,9 +234,9 @@ impl Gh {
         }
     }
 
-    /// get all workflows of a repo
+    /// get all workflow definitions of a repo
     ///
-    /// returns all active workflows of a repo
+    /// returns all active workflow definitions of a repo
     pub fn repo_workflows(&mut self) -> Result<Workflows> {
         // let args = self.construct_gh_api_args(&mut vec!["/repos/{owner}/{repo}/actions/workflows"]);
         self.set_gh_api_args(&mut vec![
@@ -264,6 +289,7 @@ impl Gh {
                 }
                 Err(e) => Err(anyhow!(e)),
             }?;
+            debug!("runs: {:?}", &runs);
             // when we have collected all runs, break
             if runs.total_count == workflow_runs.workflow_runs.len() {
                 break;
@@ -398,21 +424,13 @@ impl Gh {
     ///
     /// * `run_id`: the workflow run id to delete
     pub fn delete_workflow_run(&mut self, run_id: i64) -> Result<()> {
-        let url = format!("/repos/{{owner}}/{{repo}}/actions/runs/{}", run_id);
-        let args = self.construct_gh_api_args(&mut vec![url.as_str(), "--method", "DELETE"]);
+        let mut args = vec![format!("/repos/{{owner}}/{{repo}}/actions/runs/{}", run_id)];
+        self.set_gh_api_args(&mut args);
         // self.set_gh_api_args(&mut vec![url, "--method".to_string(), "DELETE".to_string()]);
         debug!("Deleting workfow run: {}", run_id);
 
         // TODO: make sure this works
         return self.execute::<()>();
-        let output = Command::new("gh").args(args).output()?;
-
-        if output.status.success() {
-            return Ok(());
-        } else {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(anyhow!("failed deleting workflow run logs: {}", stderr));
-        }
     }
 }
 
