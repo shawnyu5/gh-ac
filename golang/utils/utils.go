@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/cli/go-gh/v2"
 	"github.com/google/go-github/v61/github"
+	"github.com/ktr0731/go-fuzzyfinder"
 	"math/rand/v2"
 	"os"
 	"os/exec"
@@ -135,4 +136,53 @@ func RandomSpinner(suffix string) *spinner.Spinner {
 	s := spinner.New(spinner.CharSets[rand.IntN(90)], 100*time.Millisecond)
 	s.Suffix = suffix
 	return s
+}
+
+// SelectRepoWorkflowName gets all defined workflows in the repo.
+//
+// If there are more than 1 workflow defined, prompt the user to select a workflow. Otherwise return the only workflow
+// name in the repo
+func SelectRepoWorkflowName() (workflowName *string, err error) {
+	stdout, _, err := gh.Exec("api", "/repos/{owner}/{repo}/actions/workflows")
+	if err != nil {
+		log.Fatalf("Failed to get repo workflows: %w", err)
+	}
+
+	// all workflows defined in current repo
+	var repoWorkflows github.Workflows
+	err = json.Unmarshal(stdout.Bytes(), &repoWorkflows)
+	if err != nil {
+		return nil, err
+	}
+
+	//var workflowName string
+
+	// If there are multiple workflows defined for the repo, prompt user for which workflow they would like to use
+	if repoWorkflows.GetTotalCount() > 1 {
+		var workflowNames []string
+		for _, workflow := range repoWorkflows.Workflows {
+			workflowNames = append(workflowNames, workflow.GetName())
+		}
+
+		idx, err := fuzzyfinder.Find(workflowNames, func(i int) string {
+			return workflowNames[i]
+		})
+
+		if errors.Is(err, fuzzyfinder.ErrAbort) {
+			log.Debug("User aborted during selection")
+			os.Exit(0)
+		} else if err != nil {
+			log.Fatalf("Failed to get selection: %w", err)
+		}
+
+		log.Debugf("Selected workflowName: %s", workflowNames[idx])
+
+		workflowName = &workflowNames[idx]
+	} else {
+		// Otherwise if there are only a single workflow, use that one
+		name := repoWorkflows.Workflows[0].GetName()
+		workflowName = &name
+	}
+
+	return workflowName, nil
 }

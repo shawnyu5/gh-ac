@@ -24,3 +24,12 @@ func Push(force bool) error {
 	fmt.Println(string(output))
 	return err
 }
+
+// Commit runs `git commit` with `args` passed to it
+func Commit(args []string) error {
+	cmdArgs := []string{"commit"}
+	cmdArgs = append(cmdArgs, args...)
+	output, err := exec.Command("git", cmdArgs...).CombinedOutput()
+	fmt.Println(string(output))
+	return err
+}
