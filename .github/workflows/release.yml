@@ -33,7 +33,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: cli/gh-extension-precompile@v1
+      - name: Compile and upload assets
+        uses: cli/gh-extension-precompile@v1
         with:
           go_version: "1.21"
 
