@@ -36,4 +36,5 @@ var configCmd = &cobra.Command{
 func init() {
 	cmd.RootCmd.AddCommand(configCmd)
 	configCmd.Flags().StringVar(&flags.hostName, "hostname", "", "set the hostname")
+	configCmd.MarkFlagRequired("hostname")
 }

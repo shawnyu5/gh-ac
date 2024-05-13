@@ -40,8 +40,8 @@ func Write(config Config) error {
 	if err != nil {
 		log.Fatal(err)
 	}
-	os.Mkdir(homeDir+"/.config/gh-ac-go/", 0777)
+	os.Mkdir(homeDir+"/.config/gh-ac/", 0777)
 
-	err = viper.WriteConfigAs(homeDir + "/.config/gh-ac-go/default-config.yml")
+	err = viper.WriteConfigAs(homeDir + "/.config/gh-ac/default-config.yml")
 	return err
 }
