@@ -1,18 +1,4 @@
 {
    "name": "gh-ac",
-   "private": true,
-   "version": "3.5.13",
-   "description": "",
-   "author": "Shawn Yu",
-   "release": {
-      "branches": [
-         {
-            "name": "master"
-         },
-         {
-            "name": "dev",
-            "prerelease": true
-         }
-      ]
-   }
+   "private": true
 }
