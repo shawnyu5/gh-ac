@@ -1,6 +1,8 @@
+// Package git a wrapper around `git`
 package git
 
 import (
+	"bytes"
 	"fmt"
 	"os/exec"
 )
@@ -32,4 +34,11 @@ func Commit(args []string) error {
 	output, err := exec.Command("git", cmdArgs...).CombinedOutput()
 	fmt.Println(string(output))
 	return err
+}
+
+// CurrentBranchName get the current branch name
+func CurrentBranchName() (string, error) {
+	args := []string{"rev-parse", "--abbrev-ref", "HEAD"}
+	output, err := exec.Command("git", args...).CombinedOutput()
+	return string(bytes.TrimSpace(output)), err
 }

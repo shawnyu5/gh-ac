@@ -11,8 +11,6 @@ import (
 type cmdFlags struct {
 	// Name of workflowName
 	workflowName string
-	// Toggle print the URL to workflowName instead of opening it in browser. Defaults to false
-	printUrl bool
 }
 
 var flags cmdFlags

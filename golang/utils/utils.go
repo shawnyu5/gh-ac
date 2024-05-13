@@ -19,7 +19,7 @@ import (
 //
 // Will return an error if no workflow with `name` is found
 func GetWorkflowRunByName(name string) (*github.WorkflowRun, error) {
-	workflowRuns, err := gh.New[github.WorkflowRuns]().Arg("api").Arg("/repos/{owner}/{repo}/actions/runs").Exec()
+	workflowRuns, err := gh.New[github.WorkflowRuns]().Arg("api").Arg("/repos/{owner}/{repo}/actions/runs").AppendHostName().Exec()
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +86,7 @@ func SelectRepoWorkflowName() (workflowName *string, err error) {
 	var repoWorkflowDefinitions []*github.Workflow
 	page := 1
 	for {
-		workflows, err := gh.New[github.Workflows]().Arg("api").Arg(fmt.Sprintf("/repos/{owner}/{repo}/actions/workflows?per_page=100&page=%d", page)).Exec()
+		workflows, err := gh.New[github.Workflows]().Arg("api").Arg(fmt.Sprintf("/repos/{owner}/{repo}/actions/workflows?per_page=100&page=%d", page)).AppendHostName().Exec()
 		if err != nil {
 			return nil, err
 		}
