@@ -45,11 +45,11 @@ If no workflowName run as been started, this command will wait indefinite until 
 			log.Fatalf("Failed to track new workflow: %w", err)
 		}
 
+		s.Stop()
 		err = utils.OpenInBrowser([]string{newWorkflow.GetHTMLURL()})
 		if err != nil {
 			log.Fatalf("Failed to open workflow in browser: %w", err)
 		}
-		s.Stop()
 
 		return nil
 	},
