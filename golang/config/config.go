@@ -15,7 +15,7 @@ type Config struct {
 func Load() (*Config, error) {
 	viper.SetConfigName("default-config")
 	viper.SetConfigType("yml")
-	viper.AddConfigPath("$HOME/.config/gh-ac-go")
+	viper.AddConfigPath("$HOME/.config/gh-ac")
 	viper.SetDefault("hostname", "github.com")
 
 	if err := viper.ReadInConfig(); err != nil {
