@@ -7,7 +7,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/google/go-github/v61/github"
 	"github.com/ktr0731/go-fuzzyfinder"
-	ghwrapper "github.com/shawnyu5/gh-ac/gh"
+	"github.com/shawnyu5/gh-ac/gh"
 	"math/rand/v2"
 	"os"
 	"os/exec"
@@ -19,7 +19,7 @@ import (
 //
 // Will return an error if no workflow with `name` is found
 func GetWorkflowRunByName(name string) (*github.WorkflowRun, error) {
-	workflowRuns, err := ghwrapper.New[github.WorkflowRuns]().Arg("api").Arg("/repos/{owner}/{repo}/actions/runs").Exec()
+	workflowRuns, err := gh.New[github.WorkflowRuns]().Arg("api").Arg("/repos/{owner}/{repo}/actions/runs").Exec()
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +86,7 @@ func SelectRepoWorkflowName() (workflowName *string, err error) {
 	var repoWorkflowDefinitions []*github.Workflow
 	page := 1
 	for {
-		workflows, err := ghwrapper.New[github.Workflows]().Arg("api").Arg(fmt.Sprintf("/repos/{owner}/{repo}/actions/workflows?per_page=100&page=%d", page)).Exec()
+		workflows, err := gh.New[github.Workflows]().Arg("api").Arg(fmt.Sprintf("/repos/{owner}/{repo}/actions/workflows?per_page=100&page=%d", page)).Exec()
 		if err != nil {
 			return nil, err
 		}

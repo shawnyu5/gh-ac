@@ -1,4 +1,4 @@
-package ghwrapper
+package gh
 
 import (
 	"encoding/json"
