@@ -1,4 +1,4 @@
-name: ".github/workflows/workflow_dispatch.yml"
+name: "dispatch"
 
 on:
   workflow_dispatch:
