@@ -24,7 +24,7 @@ jobs:
                 name: "master"
               },
               {
-                name: "feat/golang_port",
+                name: "feat/golang-port",
                 prerelease: true
 
               }
