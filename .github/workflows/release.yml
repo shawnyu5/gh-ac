@@ -35,5 +35,5 @@ jobs:
 
       - uses: cli/gh-extension-precompile@v1
         with:
-          go_version: "1.22"
+          go_version: "1.21"
 

@@ -8,7 +8,9 @@ import (
 	"github.com/google/go-github/v61/github"
 	"github.com/ktr0731/go-fuzzyfinder"
 	"github.com/shawnyu5/gh-ac/gh"
-	"math/rand/v2"
+	// TODO: use V2 once this issue is solved. v2 is not included in go 1.21
+	// https://github.com/cli/gh-extension-precompile/issues/50
+	"math/rand"
 	"os"
 	"os/exec"
 	"strings"
@@ -72,7 +74,7 @@ func OpenInBrowser(args []string) error {
 
 // RandomSpinner creates a random spinner
 func RandomSpinner(suffix string) *spinner.Spinner {
-	s := spinner.New(spinner.CharSets[rand.IntN(90)], 100*time.Millisecond)
+	s := spinner.New(spinner.CharSets[rand.Intn(90)], 100*time.Millisecond)
 	s.Suffix = suffix
 	return s
 }
