@@ -2,10 +2,9 @@ package force
 
 import (
 	"github.com/charmbracelet/log"
+	"github.com/shawnyu5/gh-ac/cmd"
 	"github.com/shawnyu5/gh-ac/git"
 	"github.com/shawnyu5/gh-ac/utils"
-
-	"github.com/shawnyu5/gh-ac/cmd"
 	"github.com/spf13/cobra"
 )
 
@@ -36,7 +35,7 @@ var forceCmd = &cobra.Command{
 			workflowName = *name
 		}
 
-		s := utils.RandomSpinner("Looking for new workflow run")
+		s := utils.RandomSpinner("Looking for new workflow run\n")
 
 		newWorkflow, err := utils.TrackNewWorkflowRun(workflowName, func() {
 			git.Commit([]string{"--amend", "--no-edit"})

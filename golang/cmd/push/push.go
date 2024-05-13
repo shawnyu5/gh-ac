@@ -32,12 +32,12 @@ If no workflowName run as been started, this command will wait indefinite until 
 		} else {
 			name, err := utils.SelectRepoWorkflowName()
 			if err != nil {
-				log.Fatalf("Failed to select target workflow: %w", err)
+				log.Fatalf("Failed to select target workflow: %s", err)
 			}
 			workflowName = *name
 		}
 
-		s := utils.RandomSpinner("Looking for new workflow run")
+		s := utils.RandomSpinner("Looking for new workflow run\n")
 
 		newWorkflow, err := utils.TrackNewWorkflowRun(workflowName, func() {
 			git.Push(false)
@@ -59,15 +59,5 @@ If no workflowName run as been started, this command will wait indefinite until 
 
 func init() {
 	cmd.RootCmd.AddCommand(pushCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// pushCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// pushCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	pushCmd.Flags().StringVarP(&flags.workflowName, "workflow", "w", "", "case insensitive name for the workflow name track")
 }

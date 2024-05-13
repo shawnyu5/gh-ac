@@ -1,13 +1,13 @@
 package utils
 
 import (
-	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/briandowns/spinner"
 	"github.com/charmbracelet/log"
-	"github.com/cli/go-gh/v2"
 	"github.com/google/go-github/v61/github"
 	"github.com/ktr0731/go-fuzzyfinder"
+	ghwrapper "github.com/shawnyu5/gh-ac/gh"
 	"math/rand/v2"
 	"os"
 	"os/exec"
@@ -17,17 +17,11 @@ import (
 
 // GetWorkflowRunByName get the latest workflow run, searching by name. `name` is case-insensitive
 //
-// Will return an error if no workflow by the name `name` is found
+// Will return an error if no workflow with `name` is found
 func GetWorkflowRunByName(name string) (*github.WorkflowRun, error) {
-	stdout, _, err := gh.Exec("api", "/repos/{owner}/{repo}/actions/runs")
+	workflowRuns, err := ghwrapper.New[github.WorkflowRuns]().Arg("api").Arg("/repos/{owner}/{repo}/actions/runs").Exec()
 	if err != nil {
-		return nil, errors.New("Failed to get workflow run: " + err.Error())
-	}
-
-	var workflowRuns github.WorkflowRuns
-	err = json.Unmarshal(stdout.Bytes(), &workflowRuns)
-	if err != nil {
-		return nil, errors.New("Failed to parse workflow runs: " + err.Error())
+		return nil, err
 	}
 
 	for _, workflowRun := range workflowRuns.WorkflowRuns {
@@ -42,57 +36,8 @@ func GetWorkflowRunByName(name string) (*github.WorkflowRun, error) {
 // TrackNewWorkflowRun will trigger a workflow run, by calling `trigger()`, and look for a new workflow run, with the
 // name `workflowName`
 //
-// `trigger` MUST trigger a new workflow run
+// `trigger` MUST trigger a new workflow run.
 func TrackNewWorkflowRun(workflowName string, trigger func()) (*github.WorkflowRun, error) {
-	stdout, _, err := gh.Exec("api", "/repos/{owner}/{repo}/actions/workflows")
-	if err != nil {
-		log.Fatalf("Failed to get repo workflows: %w", err)
-	}
-
-	// all workflows defined in current repo
-	var repoWorkflows github.Workflows
-	err = json.Unmarshal(stdout.Bytes(), &repoWorkflows)
-	if err != nil {
-		return nil, err
-	}
-
-	//var workflowName string
-	//
-	//if flags.workflowName != "" {
-	//	workflowName = flags.workflowName
-	//} else {
-	//	// If there are multiple workflows defined for the repo, prompt user for which workflow they would like to use
-	//	if repoWorkflows.GetTotalCount() > 1 {
-	//		var workflowNames []string
-	//		for _, workflow := range repoWorkflows.Workflows {
-	//			workflowNames = append(workflowNames, workflow.GetName())
-	//		}
-	//
-	//		idx, err := fuzzyfinder.Find(workflowNames, func(i int) string {
-	//			return workflowNames[i]
-	//		})
-	//
-	//		if errors.Is(err, fuzzyfinder.ErrAbort) {
-	//			log.Debug("User aborted during selection")
-	//			os.Exit(0)
-	//		} else if err != nil {
-	//			log.Fatalf("Failed to get selection: %w", err)
-	//		}
-	//
-	//		log.Debugf("Selected workflowName: %s", workflowNames[idx])
-	//
-	//		workflowName = workflowNames[idx]
-	//	} else {
-	//		// Otherwise if there are only a single workflow, use that one
-	//		workflowName = repoWorkflows.Workflows[0].GetName()
-	//	}
-	//}
-
-	stdout, _, err = gh.Exec("api", "/repos/{owner}/{repo}/actions/runs")
-	if err != nil {
-		log.Fatalf("Failed to get workflowName run: %s", err)
-	}
-
 	initialWorkflowRun, err := GetWorkflowRunByName(workflowName)
 	if err != nil {
 		log.Fatalf("Failed to get initial workflowName run: %s", err)
@@ -101,19 +46,13 @@ func TrackNewWorkflowRun(workflowName string, trigger func()) (*github.WorkflowR
 	// trigger new workflow run
 	trigger()
 
-	//log.Infof("Waiting for new workflow run '%s' to start...", workflowName)
 	for {
 		log.Debug("Sleep for 3s")
 		time.After(3 * time.Second)
 
-		stdout, _, err = gh.Exec("api", "/repos/{owner}/{repo}/actions/runs")
-		if err != nil {
-			log.Fatalf("Failed to get workflowName run: %s", err)
-		}
-
 		newWorkflowRun, err := GetWorkflowRunByName(workflowName)
 		if err != nil {
-			log.Fatalf("Failed to retrieve workflowName run after new workflowName trigger: %s", err)
+			log.Fatalf("Failed to retrieve workflow run after new workflow trigger: %s", err)
 		}
 
 		// If ID of previous vs new workflowName run doesn't match, that means a new workflow has started
@@ -143,25 +82,26 @@ func RandomSpinner(suffix string) *spinner.Spinner {
 // If there are more than 1 workflow defined, prompt the user to select a workflow. Otherwise return the only workflow
 // name in the repo
 func SelectRepoWorkflowName() (workflowName *string, err error) {
-	stdout, _, err := gh.Exec("api", "/repos/{owner}/{repo}/actions/workflows")
-	if err != nil {
-		log.Fatalf("Failed to get repo workflows: %w", err)
+	// All defined workflows in the repo
+	var repoWorkflowDefinitions []*github.Workflow
+	page := 1
+	for {
+		workflows, err := ghwrapper.New[github.Workflows]().Arg("api").Arg(fmt.Sprintf("/repos/{owner}/{repo}/actions/workflows?per_page=100&page=%d", page)).Exec()
+		if err != nil {
+			return nil, err
+		}
+		if len(workflows.Workflows) == 0 {
+			break
+		}
+		repoWorkflowDefinitions = append(repoWorkflowDefinitions, workflows.Workflows...)
+		page++
 	}
-
-	// all workflows defined in current repo
-	var repoWorkflows github.Workflows
-	err = json.Unmarshal(stdout.Bytes(), &repoWorkflows)
-	if err != nil {
-		return nil, err
-	}
-
-	//var workflowName string
 
 	// If there are multiple workflows defined for the repo, prompt user for which workflow they would like to use
-	if repoWorkflows.GetTotalCount() > 1 {
+	if len(repoWorkflowDefinitions) > 1 {
 		var workflowNames []string
-		for _, workflow := range repoWorkflows.Workflows {
-			workflowNames = append(workflowNames, workflow.GetName())
+		for _, workflowDefinition := range repoWorkflowDefinitions {
+			workflowNames = append(workflowNames, workflowDefinition.GetName())
 		}
 
 		idx, err := fuzzyfinder.Find(workflowNames, func(i int) string {
@@ -175,12 +115,12 @@ func SelectRepoWorkflowName() (workflowName *string, err error) {
 			log.Fatalf("Failed to get selection: %w", err)
 		}
 
-		log.Debugf("Selected workflowName: %s", workflowNames[idx])
+		log.Debugf("Selected workflow name: %s", workflowNames[idx])
 
 		workflowName = &workflowNames[idx]
 	} else {
 		// Otherwise if there are only a single workflow, use that one
-		name := repoWorkflows.Workflows[0].GetName()
+		name := repoWorkflowDefinitions[0].GetName()
 		workflowName = &name
 	}
 

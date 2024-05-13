@@ -20,7 +20,6 @@ var RootCmd = &cobra.Command{
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		if flags.debug {
 			log.SetLevel(log.DebugLevel)
-			log.Debug("Debug logging enabled")
 		}
 	},
 	//Run: func(cmd *cobra.Command, args []string) {
