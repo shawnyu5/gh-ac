@@ -14,6 +14,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
+      - uses: codfish/semantic-release-action@v3
+        id: semantic_release
+        with:
+          branches: |
+            [
+              {
+                name: "master"
+              },
+              {
+                name: "feat/golang_port",
+                prerelease: true
+
+              }
+
+            ]
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: cli/gh-extension-precompile@v1
         with:
           go_version: "1.22"
