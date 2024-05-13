@@ -3,7 +3,7 @@ name: Generate release
 on:
   push:
     branches:
-      - "**"
+      - master
 
 jobs:
   release:
