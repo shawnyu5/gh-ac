@@ -28,7 +28,7 @@ var configCmd = &cobra.Command{
 		})
 		log.Infof("Hostname set to %s", flags.hostName)
 		if err != nil {
-			log.Fatalf("Failed to write to config: %w", err)
+			log.Fatalf("Failed to write to config: %s", err)
 		}
 	},
 }

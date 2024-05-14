@@ -13,9 +13,10 @@ type Config struct {
 
 // Load loads the config file
 func Load() (*Config, error) {
-	viper.SetConfigName("default-config")
+	viper.SetConfigName("gh-ac")
 	viper.SetConfigType("yml")
 	viper.AddConfigPath("$HOME/.config/gh-ac")
+	viper.AddConfigPath(".")
 	viper.SetDefault("hostname", "github.com")
 
 	if err := viper.ReadInConfig(); err != nil {
@@ -42,6 +43,6 @@ func Write(config Config) error {
 	}
 	os.Mkdir(homeDir+"/.config/gh-ac/", 0777)
 
-	err = viper.WriteConfigAs(homeDir + "/.config/gh-ac/default-config.yml")
+	err = viper.WriteConfigAs(homeDir + "/.config/gh-ac/gh-ac.yml")
 	return err
 }
