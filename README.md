@@ -1,15 +1,18 @@
-# Gh actions
+# Gh ac
 
 Trigger Github action runs, and open the action run in the browser.
 
 <!-- vim-markdown-toc GFM -->
 
-- [Installation](#installation)
-- [Setup](#setup)
-- [Usage](#usage)
-- [Trouble shooting](#trouble-shooting)
-  - [Expected workflow are not showing up when running push or force](#expected-workflow-are-not-showing-up-when-running-push-or-force)
-- [Full help](#full-help)
+* [Installation](#installation)
+* [Setup](#setup)
+* [Usage](#usage)
+* [Achieved workflows](#achieved-workflows)
+    * [Commit + push](#commit--push)
+    * [Amend current commit + force push](#amend-current-commit--force-push)
+    * [Workflows with manual triggers](#workflows-with-manual-triggers)
+* [Troubleshooting](#troubleshooting)
+    * [Expected workflow are not showing up when running push or force](#expected-workflow-are-not-showing-up-when-running-push-or-force)
 
 <!-- vim-markdown-toc -->
 
@@ -21,7 +24,7 @@ gh extension install https://github.com/shawnyu5/gh-ac
 
 ## Setup
 
-This extension uses the `$BROWSER` environment variable to determine the browser to use. Add the following to your `bashrc`
+This extension uses the `$BROWSER` environment variable to determine the browser to use. Add the following to your `bashrc` / `zshrc`
 
 ```bash
 export BROWSER="path/to/browser"
@@ -29,49 +32,63 @@ export BROWSER="path/to/browser"
 
 ## Usage
 
-- `gh ac push` - push unpushed commits if there are any. Allow the user to select the workflow run to fetch, and open the latest workflow run in the browser.
+```text
+Fire off Github action workflow runs, and open it in the browser
 
-![gh_ac_push](img/gh_ac_push.png)
+Usage:
+  ac [command]
 
-- `gh ac force` - perform a `git commit --amend --no-edit && git push --force` on the current branch. Allow the user to select the workflow run to fetch, and open the latest workflow run in the browser.
-  - if there are currently staged changes, prompt for confirmation before proceeding
+Available Commands:
+  cleanup     Clean up workflow run history for a specific workflow
+  config      Set config values
+  dispatch    Create a workflow dispatch event, and open the workflow in the browser
+  force       Force push to the current branch to trigger a workflow run, and open it in the browser
+  help        Help about any command
+  push        Push current changes and open the workflow run in browser
 
-![gh_ac_force](img/gh_ac_force.png)
+Flags:
+      --debug   toggle debug logging
+  -h, --help    help for ac
 
-- `gh ac dispatch` - create a workflow dispatch event to trigger a manual workflow. Allow the user to select the workflow to trigger. Note this extension is not responsible for filtering which workflows are has manual triggers. It will display all workflows in the repo.
-  - `gh ac dispatch --ref <branch_name>` to select the branch to dispatch the workflow from. Defaults to the current branch
-  - input can be passed to the workflow in the form `gh ac dispatch -f key=val -f key2=val2`
-- `gh ac <push|force|dispatch> -w <WORKFLOW_NAME>` - specify the workflow name to search for. This is not case sensitive.
-- `gh ac <push|force|dispatch> --url` - print out the workflow URL instead of opening it in browser
-- `gh ac config --hostname` to get a custom hostname (for Github enterprise)
-- `gh ac <command> -v` - configure logging level. More time the flag is specified, the more granular the logging
-- `gh ac cleanup` - cleanup old workflows in the Github actions tab, whose workflow files has been renamed, or deleted. Old workflows are identified by workflows that has the same name as the path to the workflow file. Will prompt for confirmation before deletion.
-  - This is no longer an issue in the Public Github. Workflows are automatically removed once their action files are deleted. This is still an issue in GHE.
-  - For example, a workflow called `.github/workflows/ci.yml`, whose path is `.github/workflows/ci.yml` will be considered an old workflow, which will be cleaned up.
-- `gh ac cleanup --all` - rather than perform automatically filtering, prompt the user for which workflow logs they would like to delete.
+Use "ac [command] --help" for more information about a command.
+```
 
-## Trouble shooting
+## Achieved workflows
+
+This plugin allows the following workflow when developing Github actions:
+
+### Commit + push
+
+This is a typical git workflow you'd follow when developing a feature
+
+1. Commit your local changes using `git`
+2. Run `gh ac push` to push your changes
+3. Select the workflow run to open in the browser
+
+### Amend current commit + force push
+
+Sometimes, you'd want to make a very small change in a workflow, that does not constitute making another commit. You would like to just bundle your current changes with the previous commit:
+
+1. Stage the changes you would like to push: `git add my-file.txt`
+2. Use `gh ac force`, which will run `git commit --amend --no-edit && git push` under the hood, to add your current changes to the previous commit, and force push
+3. Select the workflow run to open in the browser
+
+**NOTE** all git commands assumes you have set the default branch to push to. If it is not set, run `git push -u origin <branch name>` prior to running this CLI.
+
+### Workflows with manual triggers
+
+For workflow with `workflow_dispatch` events, this plugin supports emitting a `workflow_dispatch` event, and opening the workflow in the browser.
+
+1. Use `gh ac dispatch`, and select a workflow name to send a `workflow_dispatch` event
+  - It is the user's responsibility to select the workflow with `workflow_dispatch` trigger. This plugin is not aware of the underlying workflow triggers
+2. To send workflow inputs, use `gh ac dispatch -w <workflow name> -f key=value` to pass form body
+
+To run the workflow on a different branch, pass the `--ref <github ref>` flag to use the workflow defined at the specific `ref`
+
+All above commands supports the `-w` flag, that allows passing the target workflow name as an argument, rather than being prompted for it on every run
+
+## Troubleshooting
 
 ### Expected workflow are not showing up when running push or force
 
 If the repo is a forked repo, then you must set the default repo using `gh repo set-default`.
-
-## Full help
-
-```
-fire off github actions and open the lastest action run in browser
-
-Usage: gh-ac [OPTIONS] <COMMAND>
-
-Commands:
-  push      push all unpushed commits
-  force     force push to trigger new workflow run(s)
-  dispatch  create a workflow dispatch event
-  config    set configuration values
-  help      Print this message or the help of the given subcommand(s)
-
-Options:
-  -v, --verbosity...
-  -h, --help          Print help
-  -V, --version       Print version
-```

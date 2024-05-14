@@ -4,13 +4,6 @@ on:
   push:
     branches:
       - master
-    paths:
-      - "src/**"
-      - ".github/**"
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   release:
@@ -18,33 +11,25 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: codfish/semantic-release-action@v2
+      - uses: codfish/semantic-release-action@v3
         id: semantic_release
+        with:
+          branches: |
+            [
+              {
+                name: "master"
+              },
+              {
+                name: "alpha",
+                prerelease: true
+
+              }
+
+            ]
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Update version in Cargo.toml
-        if: steps.semantic_release.outputs.new-release-published == 'true'
-        uses: ciiiii/toml-editor@1.0.0
-        with:
-          file: "Cargo.toml"
-          key: "package.version"
-          value: ${{ steps.semantic_release.outputs.release-version }}
-
-      - name: Cargo build project
-        if: steps.semantic_release.outputs.new-release-published == 'true'
-        run: cargo build --release
-
-      - name: Commit changes
-        if: steps.semantic_release.outputs.new-release-published == 'true'
-        uses: stefanzweifel/git-auto-commit-action@v4
-        with:
-          commit_message: "chore(AUTO): update app version [skip ci]"
-          branch: ${{ github.ref_name }}
-          create_branch: false
-
-      - name: Upload artifact to Github releases
-        if: steps.semantic_release.outputs.new-release-published == 'true'
+      - name: Compile and upload assets
         uses: cli/gh-extension-precompile@v1
         with:
-          build_script_override: "script/build.sh"
+          go_version: "1.21"

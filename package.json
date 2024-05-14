@@ -1,27 +1,4 @@
 {
    "name": "gh-ac",
-   "private": true,
-   "version": "3.5.13",
-   "description": "",
-   "repository": {
-      "type": "git",
-      "url": "git+https://github.com/shawnyu5/gh-ac.git"
-   },
-   "author": "Shawn Yu",
-   "license": "ISC",
-   "bugs": {
-      "url": "https://github.com/shawnyu5/gh-ac/issues"
-   },
-   "homepage": "https://github.com/shawnyu5/gh-ac#readme",
-   "release": {
-      "branches": [
-         {
-            "name": "master"
-         },
-         {
-            "name": "dev",
-            "prerelease": true
-         }
-      ]
-   }
+   "private": true
 }
