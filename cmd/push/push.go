@@ -35,7 +35,7 @@ If no workflow run as been started, this command will wait indefinite until a ne
 			workflowName = *name
 		}
 
-		s := utils.RandomSpinner("Looking for new workflow run\n")
+		s := utils.RandomSpinner("Looking for new workflow run")
 
 		newWorkflow, err := utils.TrackNewWorkflowRun(workflowName, func() {
 			git.Push(false)

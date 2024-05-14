@@ -50,7 +50,7 @@ var dispatchCmd = &cobra.Command{
 			}
 		}
 
-		s := utils.RandomSpinner("Looking for new workflow run\n")
+		s := utils.RandomSpinner("Looking for new workflow run")
 
 		newWorkflow, err := utils.TrackNewWorkflowRun(workflowName, func() {
 			_, err := gh.New[any]().

@@ -35,7 +35,7 @@ var forceCmd = &cobra.Command{
 			workflowName = *name
 		}
 
-		s := utils.RandomSpinner("Looking for new workflow run\n")
+		s := utils.RandomSpinner("Looking for new workflow run")
 
 		newWorkflow, err := utils.TrackNewWorkflowRun(workflowName, func() {
 			git.Commit([]string{"--amend", "--no-edit"})

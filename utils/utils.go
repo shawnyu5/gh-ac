@@ -21,7 +21,10 @@ import (
 //
 // Will return an error if no workflow with `name` is found
 func GetWorkflowRunByName(name string) (*github.WorkflowRun, error) {
-	workflowRuns, err := gh.New[github.WorkflowRuns]().Arg("api").Arg("/repos/{owner}/{repo}/actions/runs").AppendHostName().Exec()
+	workflowRuns, err := gh.New[github.WorkflowRuns]().
+		Arg("api").
+		Arg("/repos/{owner}/{repo}/actions/runs").
+		Exec()
 	if err != nil {
 		return nil, err
 	}
@@ -75,20 +78,23 @@ func OpenInBrowser(args []string) error {
 // RandomSpinner creates a random spinner
 func RandomSpinner(suffix string) *spinner.Spinner {
 	s := spinner.New(spinner.CharSets[rand.Intn(90)], 100*time.Millisecond)
-	s.Suffix = suffix
+	s.Suffix = suffix + "\n"
 	return s
 }
 
 // SelectRepoWorkflowName gets all defined workflows in the repo.
 //
-// If there are more than 1 workflow defined, prompt the user to select a workflow. Otherwise return the only workflow
+// If there are more than 1 workflow defined, prompt the user to select a workflow. Otherwise, return the only workflow
 // name in the repo
 func SelectRepoWorkflowName() (workflowName *string, err error) {
 	// All defined workflows in the repo
 	var repoWorkflowDefinitions []*github.Workflow
 	page := 1
 	for {
-		workflows, err := gh.New[github.Workflows]().Arg("api").Arg(fmt.Sprintf("/repos/{owner}/{repo}/actions/workflows?per_page=100&page=%d", page)).AppendHostName().Exec()
+		workflows, err := gh.New[github.Workflows]().
+			Arg("api").
+			Arg(fmt.Sprintf("/repos/{owner}/{repo}/actions/workflows?per_page=100&page=%d", page)).
+			Exec()
 		if err != nil {
 			return nil, err
 		}

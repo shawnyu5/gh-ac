@@ -82,7 +82,6 @@ func listRunsForWorkflow(workflowID int64) ([]*github.WorkflowRun, error) {
 		workflowRun, err := gh.New[github.WorkflowRuns]().
 			Arg("api").
 			Arg(fmt.Sprintf("/repos/{owner}/{repo}/actions/workflows/%d/runs?per_page=100&page=%d", workflowID, page)).
-			AppendHostName().
 			Exec()
 		if err != nil {
 			return nil, err
@@ -105,7 +104,8 @@ func findWorkflowByName(name string) (*github.Workflow, error) {
 	var repoWorkflowDefinitions []*github.Workflow
 	page := 1
 	for {
-		workflows, err := gh.New[github.Workflows]().Arg("api").Arg(fmt.Sprintf("/repos/{owner}/{repo}/actions/workflows?per_page=100&page=%d", page)).AppendHostName().Exec()
+		workflows, err := gh.New[github.Workflows]().Arg("api").Arg(fmt.Sprintf("/repos/{owner}/{repo}/actions/workflows?per_page=100&page=%d", page)).
+			Exec()
 		if err != nil {
 			return nil, err
 		}
@@ -133,7 +133,6 @@ func deleteWorkflowRun(workflowID int64) error {
 		Arg("--method").
 		Arg("DELETE").
 		ParseOutputJson(false).
-		AppendHostName().
 		Exec()
 
 	return err

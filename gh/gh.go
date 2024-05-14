@@ -12,10 +12,6 @@ import (
 type Cmd[T any] struct {
 	// Arguments passed to the command
 	args []string
-	// Append `--hostname` flag the gh cli command.
-	//
-	// Some commands such as `gh workflow run` does not support the `--hostname` flag. Default: false
-	appendHostName bool
 	// Parse the output of the gh command as json. Default: true
 	parseOutputJson bool
 }
@@ -33,14 +29,6 @@ func (c *Cmd[T]) Arg(a string) *Cmd[T] {
 	return c
 }
 
-// AppendHostName appends the host name to the gh cli command if the hostname is configured
-//
-// Default: false
-func (c *Cmd[T]) AppendHostName() *Cmd[T] {
-	c.appendHostName = true
-	return c
-}
-
 // ParseOutputJson toggles parsing the output as json. Defaults: true
 func (c *Cmd[T]) ParseOutputJson(parse bool) *Cmd[T] {
 	c.parseOutputJson = parse
@@ -55,7 +43,7 @@ func (c *Cmd[T]) Exec() (output *T, err error) {
 	if err != nil {
 		return nil, err
 	}
-	if c.appendHostName && cfg.HostName != "" {
+	if cfg.HostName != "" {
 		c.args = append(c.args, "--hostname", cfg.HostName)
 	}
 
