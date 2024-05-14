@@ -34,7 +34,7 @@ var dispatchCmd = &cobra.Command{
 		} else {
 			name, err := utils.SelectRepoWorkflowName()
 			if err != nil {
-				log.Fatalf("Failed to select target workflow: %w", err)
+				log.Fatalf("Failed to select target workflow: %s", err)
 			}
 			workflowName = *name
 		}

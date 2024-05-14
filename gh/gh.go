@@ -33,7 +33,7 @@ func (c *Cmd[T]) Arg(a string) *Cmd[T] {
 	return c
 }
 
-// AppendHostName appends the host name to the gh cli command.
+// AppendHostName appends the host name to the gh cli command if the hostname is configured
 //
 // Default: false
 func (c *Cmd[T]) AppendHostName() *Cmd[T] {
@@ -42,8 +42,8 @@ func (c *Cmd[T]) AppendHostName() *Cmd[T] {
 }
 
 // ParseOutputJson toggles parsing the output as json. Defaults: true
-func (c *Cmd[T]) ParseOutputJson(a bool) *Cmd[T] {
-	c.parseOutputJson = a
+func (c *Cmd[T]) ParseOutputJson(parse bool) *Cmd[T] {
+	c.parseOutputJson = parse
 	return c
 }
 

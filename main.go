@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/shawnyu5/gh-ac/cmd"
+	_ "github.com/shawnyu5/gh-ac/cmd/cleanup"
 	_ "github.com/shawnyu5/gh-ac/cmd/config"
 	_ "github.com/shawnyu5/gh-ac/cmd/dispatch"
 	_ "github.com/shawnyu5/gh-ac/cmd/force"

@@ -20,7 +20,7 @@ var flags cmdFlags
 // forceCmd represents the force command
 var forceCmd = &cobra.Command{
 	Use:   "force",
-	Short: "Force push to trigger new workflow run(s)",
+	Short: "Force push to the current branch to trigger a workflow run, and open it in the browser",
 	Long:  `Runs 'git commit --amend --no-edit && git push --force', and opens the newly triggered workflow run in the browser `,
 	Run: func(cmd *cobra.Command, args []string) {
 		var workflowName string

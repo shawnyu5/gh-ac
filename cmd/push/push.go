@@ -18,10 +18,10 @@ var flags cmdFlags
 // pushCmd represents the push command
 var pushCmd = &cobra.Command{
 	Use:   "push",
-	Short: "Push current changes and open workflow in browser",
+	Short: "Push current changes and open the workflow run in browser",
 	Long: `Push current changes and open workflow in browser
 
-If no workflowName run as been started, this command will wait indefinite until a new workflowName run is started`,
+If no workflow run as been started, this command will wait indefinite until a new workflow run is started`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var workflowName string
 

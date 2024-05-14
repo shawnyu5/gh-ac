@@ -42,7 +42,7 @@ func GetWorkflowRunByName(name string) (*github.WorkflowRun, error) {
 func TrackNewWorkflowRun(workflowName string, trigger func()) (*github.WorkflowRun, error) {
 	initialWorkflowRun, err := GetWorkflowRunByName(workflowName)
 	if err != nil {
-		log.Fatalf("Failed to get initial workflowName run: %s", err)
+		log.Fatalf("Failed to get initial workflow run: %s", err)
 	}
 
 	// trigger new workflow run
