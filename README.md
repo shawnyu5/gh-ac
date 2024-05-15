@@ -91,4 +91,8 @@ All above commands supports the `-w` flag, that allows passing the target workfl
 
 ### Expected workflow are not showing up when running push or force
 
+Check in Github if the workflow is disabled. This CLI will not be able to find disabled workflows.
+
+Or
+
 If the repo is a forked repo, then you must set the default repo using `gh repo set-default`.
