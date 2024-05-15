@@ -24,6 +24,7 @@ func GetWorkflowRunByName(name string) (*github.WorkflowRun, error) {
 	workflowRuns, err := gh.New[github.WorkflowRuns]().
 		Arg("api").
 		Arg("/repos/{owner}/{repo}/actions/runs").
+		AppendHostname(true).
 		Exec()
 	if err != nil {
 		return nil, err
@@ -94,6 +95,7 @@ func SelectRepoWorkflowName() (workflowName *string, err error) {
 		workflows, err := gh.New[github.Workflows]().
 			Arg("api").
 			Arg(fmt.Sprintf("/repos/{owner}/{repo}/actions/workflows?per_page=100&page=%d", page)).
+			AppendHostname(true).
 			Exec()
 		if err != nil {
 			return nil, err

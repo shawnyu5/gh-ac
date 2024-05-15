@@ -12,6 +12,10 @@ import (
 type Cmd[T any] struct {
 	// Arguments passed to the command
 	args []string
+	// Appends the `--hostname` flag to gh command. Default: false
+	//
+	// Some commands such as `gh dispatch` does not support the `--hostname` flag
+	appendHostname bool
 	// Parse the output of the gh command as json. Default: true
 	parseOutputJson bool
 }
@@ -35,6 +39,14 @@ func (c *Cmd[T]) ParseOutputJson(parse bool) *Cmd[T] {
 	return c
 }
 
+// AppendHostname if `--hostname` flag should be appended to the command
+//
+// Some commands such as `gh dispatch` does not support the `--hostname` flag
+func (c *Cmd[T]) AppendHostname(append bool) *Cmd[T] {
+	c.appendHostname = append
+	return c
+}
+
 // Exec executes the gh command with the args, appending the hostname flag if configured
 //
 // Returns output of the command parsed into `T`
@@ -43,7 +55,7 @@ func (c *Cmd[T]) Exec() (output *T, err error) {
 	if err != nil {
 		return nil, err
 	}
-	if cfg.HostName != "" {
+	if c.appendHostname && cfg.HostName != "" {
 		c.args = append(c.args, "--hostname", cfg.HostName)
 	}
 
