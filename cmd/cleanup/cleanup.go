@@ -3,6 +3,7 @@ package cleanup
 import (
 	"errors"
 	"fmt"
+
 	"github.com/charmbracelet/log"
 	"github.com/google/go-github/v61/github"
 	"github.com/shawnyu5/gh-ac/cmd"
@@ -104,7 +105,10 @@ func findWorkflowByName(name string) (*github.Workflow, error) {
 	var repoWorkflowDefinitions []*github.Workflow
 	page := 1
 	for {
-		workflows, err := gh.New[github.Workflows]().Arg("api").Arg(fmt.Sprintf("/repos/{owner}/{repo}/actions/workflows?per_page=100&page=%d", page)).
+		workflows, err := gh.New[github.Workflows]().
+			Arg("api").
+			Arg(fmt.Sprintf("/repos/{owner}/{repo}/actions/workflows?per_page=100&page=%d", page)).
+			AppendHostname(true).
 			Exec()
 		if err != nil {
 			return nil, err
