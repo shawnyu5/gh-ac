@@ -137,6 +137,7 @@ func deleteWorkflowRun(workflowID int64) error {
 		Arg(fmt.Sprintf("/repos/{owner}/{repo}/actions/runs/%d", workflowID)).
 		Arg("--method").
 		Arg("DELETE").
+		AppendHostname(true).
 		ParseOutputJson(false).
 		Exec()
 
