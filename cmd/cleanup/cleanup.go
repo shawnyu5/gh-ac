@@ -83,6 +83,7 @@ func listRunsForWorkflow(workflowID int64) ([]*github.WorkflowRun, error) {
 		workflowRun, err := gh.New[github.WorkflowRuns]().
 			Arg("api").
 			Arg(fmt.Sprintf("/repos/{owner}/{repo}/actions/workflows/%d/runs?per_page=100&page=%d", workflowID, page)).
+			AppendHostname(true).
 			Exec()
 		if err != nil {
 			return nil, err
