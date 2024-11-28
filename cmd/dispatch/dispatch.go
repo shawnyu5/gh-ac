@@ -79,12 +79,12 @@ var dispatchCmd = &cobra.Command{
 			newWorkflowSpinner.Start()
 		})
 		if err != nil {
-			log.Fatalf("Failed to track new workflow: %w", err)
+			log.Fatalf("Failed to track new workflow: %s", err)
 		}
 
 		err = utils.OpenInBrowser([]string{newWorkflow.GetHTMLURL()})
 		if err != nil {
-			log.Fatalf("Failed to open workflow in browser: %w", err)
+			log.Fatalf("Failed to open workflow in browser: %s", err)
 		}
 		newWorkflowSpinner.Stop()
 

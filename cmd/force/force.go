@@ -30,7 +30,7 @@ var forceCmd = &cobra.Command{
 		} else {
 			name, err := utils.SelectRepoWorkflowName()
 			if err != nil {
-				log.Fatalf("Failed to select target workflow: %w", err)
+				log.Fatalf("Failed to select target workflow: %s", err)
 			}
 			workflowName = *name
 		}
@@ -43,13 +43,13 @@ var forceCmd = &cobra.Command{
 			s.Start()
 		})
 		if err != nil {
-			log.Fatalf("Failed to track new workflow: %w", err)
+			log.Fatalf("Failed to track new workflow: %s", err)
 		}
 
 		s.Stop()
 		err = utils.OpenInBrowser([]string{newWorkflow.GetHTMLURL()})
 		if err != nil {
-			log.Fatalf("Failed to open workflow in browser: %w", err)
+			log.Fatalf("Failed to open workflow in browser: %s", err)
 		}
 	},
 }
