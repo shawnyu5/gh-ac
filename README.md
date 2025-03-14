@@ -70,7 +70,7 @@ This is a typical git workflow you'd follow when developing a feature
 Sometimes, you'd want to make a very small change in a workflow, that does not constitute making another commit. You would like to just bundle your current changes with the previous commit:
 
 1. Stage the changes you would like to push: `git add my-file.txt`
-2. Use `gh ac force`, which will run `git commit --amend --no-edit && git push` under the hood, to add your current changes to the previous commit, and force push
+2. Use `gh ac force`, which will run `git commit --amend --no-edit && git push --force-with-lease` under the hood, to add your current changes to the previous commit, and force push
 3. Select the workflow run to open in the browser
 
 **NOTE** all git commands assumes you have set the default branch to push to. If it is not set, run `git push -u origin <branch name>` prior to running this CLI.
@@ -80,7 +80,9 @@ Sometimes, you'd want to make a very small change in a workflow, that does not c
 For workflow with `workflow_dispatch` events, this plugin supports emitting a `workflow_dispatch` event, and opening the workflow in the browser.
 
 1. Use `gh ac dispatch`, and select a workflow name to send a `workflow_dispatch` event
-  - It is the user's responsibility to select the workflow with `workflow_dispatch` trigger. This plugin is not aware of the underlying workflow triggers
+
+- It is the user's responsibility to select the workflow with `workflow_dispatch` trigger. This plugin is not aware of the underlying workflow triggers
+
 2. To send workflow inputs, use `gh ac dispatch -w <workflow name> -f key=value` to pass form body
 
 To run the workflow on a different branch, pass the `--ref <github ref>` flag to use the workflow defined at the specific `ref`

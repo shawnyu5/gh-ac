@@ -15,12 +15,12 @@ func CommitAdmendNoEdit() error {
 	return err
 }
 
-// Push executes `git push`. Will force push if `force` is true
+// Push executes `git push`. Will force push-with-lease if `force` is true
 func Push(force bool) error {
 	// TODO: consider making git push fail when there are nothing to push
 	args := []string{"push"}
 	if force {
-		args = append(args, "--force")
+		args = append(args, "--force-with-lease")
 	}
 	output, err := exec.Command("git", args...).CombinedOutput()
 	fmt.Println(string(output))
